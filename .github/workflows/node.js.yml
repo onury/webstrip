@@ -32,7 +32,7 @@ jobs:
     - name: Build
       run: npm run build --if-present
     - name: Test & Coverage (with xvfb)
-      uses: mujo-code/puppeteer-headful@16.6.0
+      uses: mujo-code/puppeteer-headful@master
       env:
           CI: "true"
       with:
