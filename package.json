@@ -1,0 +1,63 @@
+{
+  "name": "webstrip",
+  "version": "1.0.0",
+  "description": "Easy web stripping.",
+  "author": {
+    "name": "Onur Yıldırım",
+    "email": "onur@cutepilot.com",
+    "url": "https://github.com/onury"
+  },
+  "repository": "onury/webstrip",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "sideEffects": false,
+  "files": [
+    "lib",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.20"
+  },
+  "scripts": {
+    "deps": "npx ncu -i",
+    "audit": "npm audit --production",
+    "lint": "eslint -c .eslintrc.json --ext .ts src",
+    "build": "tsc --project tsconfig.build.json",
+    "js": "node --experimental-vm-modules --no-warnings ./lib/cli.js",
+    "ts": "npx tsx --experimental-vm-modules --no-warnings ./src/cli.ts",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "cover": "vitest --coverage",
+    "cover:txt": "vitest --coverage --coverage.reporter=text",
+    "cover:ui": "vitest --coverage --ui --coverage.reporter=html"
+  },
+  "keywords": [
+    "web",
+    "strip",
+    "scrape",
+    "tear",
+    "http",
+    "request",
+    "html",
+    "parse",
+    "url",
+    "page",
+    "webstrip"
+  ],
+  "dependencies": {
+    "puppeteer": "^23.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.4.0",
+    "@vitest/coverage-v8": "^2.0.5",
+    "@vitest/ui": "^2.0.5",
+    "eslint": "8.57",
+    "eslint-config-oy": "^1.1.2",
+    "tsconfig-oy": "^1.1.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    // CAUTION: do not include anything else
+    // or the dir structure will change
+    "src/**/*.ts"
+  ]
+}

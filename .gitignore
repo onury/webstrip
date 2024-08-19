@@ -1,0 +1,11 @@
+backup
+coverage
+test/.coverage
+wiki
+node_modules
+npm-debug.log
+tmp
+TODO.md
+.vscode/
+lib/tsconfig.*.tsbuildinfo
+lib/tsconfig.tsbuildinfo

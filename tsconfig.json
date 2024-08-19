@@ -1,0 +1,24 @@
+{
+  "extends": "tsconfig-oy",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "declarationDir": "lib",
+    "outDir": "lib",
+    "sourceMap": true,
+    "types": [
+      "node",
+      "vitest/globals",
+      "vitest/importMeta"
+    ],
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules"
+    ]
+  },
+  "include": [
+    // tsconfig.build.json only includes src/ dir.
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "vitest.config.ts"
+  ]
+}
