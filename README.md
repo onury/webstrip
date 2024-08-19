@@ -7,11 +7,11 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/onury/webstrip/actions/workflows/node.js.yml"><img src="https://github.com/onury/webstrip/actions/workflows/node.js.yml/badge.svg" alt="Build Status" /></a>
-  <a href="https://raw.github.com/onury/webstrip"><img src="https://img.shields.io/github/actions/workflow/status/onury/webstrip/node.js.yml?style=flat-square" alt="Build Status" /></a>
-  <a href="https://raw.github.com/onury/webstrip"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Fonury%2Fwebstrip%2Fraw%2Fmaster%2Fpackage.json&query=%24.version&style=flat-square&label=version&color=%23ffcc00" alt="version" /></a>
-  <a href="https://github.com/onury/webstrip/blob/master/LICENSE"><img src="https://img.shields.io/github/license/onury/webstrip
-  ?style=flat-square" alt="License" /></a>
+  <a href="https://github.com/onury/webstrip/actions/workflows/node.js.yml"><img src="https://github.com/onury/webstrip/actions/workflows/node.js.yml/badge.svg" alt="build" /></a>
+  <a href="https://github.com/onury/webstrip/blob/main/vitest.config.ts"><img src="https://img.shields.io/badge/coverage-100%25-45BF70?logo=vitest&style=flat" alt="coverage" /></a>
+  <a href="https://raw.github.com/onury/webstrip"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Fonury%2Fwebstrip%2Fraw%2Fmaster%2Fpackage.json&query=%24.version&style=flat&label=version&color=%23EB2039&logo=npm" alt="version" /></a>
+  <a href="https://github.com/onury/webstrip/blob/master/LICENSE"><img src="https://img.shields.io/github/license/onury/webstrip?style=flat" alt="license" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-3260C7?logo=typescript&logoColor=ffffff&style=flat" alt="TS" /></a>
 </p>
 
 
