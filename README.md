@@ -40,7 +40,7 @@ npm i webstrip
 import { webstrip } from 'webstrip';
 
 const content = await webstrip('https://example.com', {
-  waitForNetworkIdle: true,
+  waitUntil: 'networkidle',
   followRedirects: 5
 });
 ```
