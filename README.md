@@ -1,5 +1,5 @@
 <h1 align="center">
-    <img alt="webstrip" width="130" src="https://raw.github.com/onury/webstrip/master/_assets/webstrip-logo.svg" height="36" style="margin-bottom:30px">
+    <img alt="webstrip" src="https://github.com/onury/webstrip/raw/main/logo.svg" width="300" height="auto" style="margin-bottom:30px">
 </h1>
 
 <p align="center">
@@ -10,7 +10,7 @@
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-3260C7?logo=typescript&logoColor=ffffff&style=flat" alt="TS" /></a>
   <a href="https://github.com/onury/webstrip/blob/master/LICENSE"><img src="https://img.shields.io/github/license/onury/webstrip?style=flat" alt="license" /></a>
   <br />
-    <sub>© 2024, Onur Yıldırım (<b><a href="https://github.com/onury">@onury</a></b>).</sub>
+    <sub>© 2024, Onur Yıldırım (<b><a href="https://github.com/onury">@onury</a></b>)</sub>
 </p>
 <br />
 
