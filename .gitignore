@@ -1,4 +1,5 @@
 backup
+_backup
 coverage
 test/.coverage
 wiki
@@ -9,3 +10,4 @@ TODO.md
 .vscode/
 lib/tsconfig.*.tsbuildinfo
 lib/tsconfig.tsbuildinfo
+.DS_Store
