@@ -172,11 +172,14 @@ async function webstripNav(
     args: ['--no-sandbox'],
     defaultViewport: null,
     executablePath: nav.enabled && process.env.CI
+      /* v8 ignore next */
       ? process.env.PUPPETEER_EXEC_PATH
       : undefined
   });
 
   const [page] = await browser.pages();
+  /* v8 ignore next */
+  if (process.env.CI) await new Promise(r => setTimeout(r, 10_000));
 
   const cleanUp = async (force?: boolean): Promise<void> => {
     try {
