@@ -1,0 +1,8 @@
+{
+  "extends": [
+    "eslint-config-oy/ts"
+  ],
+  "rules": {
+    "linebreak-style": 0
+  }
+}
