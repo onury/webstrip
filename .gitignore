@@ -1,8 +1,7 @@
 backup
 _backup
-coverage
-test/.coverage
-wiki
+coverage/*
+test/.coverage/*
 node_modules
 npm-debug.log
 tmp
