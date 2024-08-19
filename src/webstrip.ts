@@ -180,9 +180,7 @@ async function webstripNav(
       // page.removeAllListeners();
       return browser.close();
       /* v8 ignore next */
-    } catch (e) {
-      console.info('Error closing browser', e);
-    }
+    } catch {}
   };
 
   await page.setExtraHTTPHeaders(
