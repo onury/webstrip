@@ -169,7 +169,11 @@ async function webstripNav(
   const nav = getNavInfo(options?.navigate);
   const browser = await puppeteer.launch({
     headless: !nav.enabled,
-    defaultViewport: null
+    args: ['--no-sandbox'],
+    defaultViewport: null,
+    executablePath: nav.enabled && process.env.CI
+      ? process.env.PUPPETEER_EXEC_PATH
+      : undefined
   });
 
   const [page] = await browser.pages();
