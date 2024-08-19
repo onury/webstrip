@@ -20,6 +20,7 @@ on:
 jobs:
   build:
 
+    # we run headful puppeteer tests on windows bec. linux/ubuntu doesn't support display
     runs-on: windows-latest
 
     strategy:
