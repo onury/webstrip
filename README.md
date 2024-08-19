@@ -1,22 +1,18 @@
 <h1 align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.github.com/onury/webstrip/master/_assets/webstrip-logo-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.github.com/onury/webstrip/master/_assets/webstrip-logo-light.png">
-    <img alt="webstrip" width="400" src="https://raw.github.com/onury/webstrip/master/_assets/webstrip-logo-light.png" height="25" style="margin-bottom:30px">
-  </picture>
+    <img alt="webstrip" width="130" src="https://raw.github.com/onury/webstrip/master/_assets/webstrip-logo.svg" height="36" style="margin-bottom:30px">
 </h1>
 
 <p align="center">
   <a href="https://github.com/onury/webstrip/actions/workflows/node.js.yml"><img src="https://github.com/onury/webstrip/actions/workflows/node.js.yml/badge.svg" alt="build" /></a>
   <a href="https://github.com/onury/webstrip/blob/main/vitest.config.ts"><img src="https://img.shields.io/badge/coverage-100%25-2BB150?logo=vitest&style=flat" alt="coverage" /></a>
-  <a href="https://raw.github.com/onury/webstrip"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Fonury%2Fwebstrip%2Fraw%2Fmaster%2Fpackage.json&query=%24.version&style=flat&label=version&color=%23EB2039&logo=npm" alt="version" /></a>
-  <a href="https://github.com/onury/webstrip/blob/master/LICENSE"><img src="https://img.shields.io/github/license/onury/webstrip?style=flat" alt="license" /></a>
+  <a href="https://raw.github.com/onury/webstrip"><img src="https://img.shields.io/npm/v/webstrip.svg?style=flat&label=version&color=%2394306B&logo=npm" alt="version" /></a>
+  <a href="https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7"><img src="https://img.shields.io/badge/ESM-F7DF1E?style=flat" alt="ESM" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-3260C7?logo=typescript&logoColor=ffffff&style=flat" alt="TS" /></a>
+  <a href="https://github.com/onury/webstrip/blob/master/LICENSE"><img src="https://img.shields.io/github/license/onury/webstrip?style=flat" alt="license" /></a>
+  <br />
+    <sub>© 2024, Onur Yıldırım (<b><a href="https://github.com/onury">@onury</a></b>).</sub>
 </p>
-
-
-
-> ©️2024, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
+<br />
 
 Easy web stripping;
 - Using HTTP request or browser navigation.
