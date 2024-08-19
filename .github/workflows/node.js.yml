@@ -23,12 +23,13 @@ jobs:
     - uses: actions/checkout@v4
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
-      env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
+    - name: Clean Install 
+      run: npm ci 
+      env:
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
     - name: Build
       run: npm run build --if-present
     - name: Test & Coverage (with xvfb)
