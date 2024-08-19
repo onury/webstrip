@@ -5,9 +5,15 @@ name: coverage
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ 'main' ]
+    paths:
+      - 'src/**'
+      - 'test/**'
   pull_request:
-    branches: [ "main" ]
+    branches: [ 'main' ]
+    paths:
+      - 'src/**'
+      - 'test/**'
 
 jobs:
   build:
