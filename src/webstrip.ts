@@ -175,14 +175,14 @@ async function webstripNav(
 
   const [page] = await browser.pages();
 
-  const cleanUp = async (force?: boolean): Promise<void> => {
+  const cleanUp = async (): Promise<void> => {
     try {
       // page.removeAllListeners();
-      if (force || !nav.enabled) {
-        return browser.close();
-      }
+      return browser.close();
       /* v8 ignore next */
-    } catch {}
+    } catch (e) {
+      console.info('Error closing browser', e);
+    }
   };
 
   await page.setExtraHTTPHeaders(
@@ -230,7 +230,7 @@ async function webstripNav(
   try {
     response = await page.goto(url, { waitUntil });
   } catch (e) {
-    cleanUp(true); // no await here
+    cleanUp(); // no await here
 
     const err = getError(e, url);
 
@@ -247,7 +247,7 @@ async function webstripNav(
   }
 
   if (!response) {
-    cleanUp(true);
+    cleanUp();
     throw new Error(ERR_NO_RESPONSE + url);
   }
 
