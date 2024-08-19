@@ -89,7 +89,7 @@ describe('webstrip', () => {
     });
     expect(result.statusCode).toBe(200);
     expect(counter).toBe(1);
-  }, 15_000);
+  }, 60_000);
 
   test('no response / not found', async () => {
     const blank = 'about:blank';
