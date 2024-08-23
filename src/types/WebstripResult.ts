@@ -1,7 +1,9 @@
-import { IncomingHttpHeaders } from 'http';
+import { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
 
 /** Represents the result of a webstrip operation. */
 export interface WebstripResult {
+  /** The headers of the HTTP response. */
+  reqHeaders: OutgoingHttpHeaders;
   /** The status code of the HTTP response. */
   statusCode: number;
   /** The headers of the HTTP response. */

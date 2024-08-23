@@ -8,8 +8,9 @@ import puppeteer, { HTTPResponse } from 'puppeteer';
 import { ReqOptions } from './types/ReqOptions.js';
 import { WebstripOptions } from './types/WebstripOptions.js';
 import { WebstripResult } from './types/WebstripResult.js';
-import { REDIRECT_CODES, buildReqHeaders } from './httpUtils.js';
+import { REDIRECT_CODES, buildReqHeaders } from './http.utils.js';
 
+export const ERR_NO_URL = 'No URL is provided!';
 export const ERR_REDIRECT = 'Too many redirects!';
 export const ERR_NO_RESPONSE = 'No response from ';
 export const ERR_NOT_FOUND = 'Address not found at ';
@@ -52,11 +53,14 @@ function getNavInfo(navigate?: WebstripOptions['navigate']) {
  * @param url - The URL to strip.
  * @param [reqOptions] - Optional request header options.
  * @returns - A promise that resolves to the webstrip result.
+ * @throws If no URL is provided.
  */
 export async function webstrip(
   url: string,
   options?: WebstripOptions
 ): Promise<WebstripResult> {
+  if (!url) throw new Error(ERR_NO_URL);
+
   const nav = getNavInfo(options?.navigate);
   const useBrowser = nav.enabled
     || Boolean(options?.waitUntil)
@@ -90,8 +94,9 @@ async function _webstripReq(
 
   return new Promise((resolve, reject) => {
     try {
+      const reqHeaders = buildReqHeaders(reqOptions?.headerOptions);
       const options: RequestOptions = {
-        headers: buildReqHeaders(reqOptions?.headerOptions)
+        headers: reqHeaders
       };
 
       https.get(url, options, response => {
@@ -124,6 +129,7 @@ async function _webstripReq(
           }
 
           resolve({
+            reqHeaders,
             statusCode,
             headers,
             data,
@@ -183,9 +189,8 @@ async function webstripNav(
     } catch {}
   };
 
-  await page.setExtraHTTPHeaders(
-    buildReqHeaders(options?.headerOptions) as Record<string, string>
-  );
+  const reqHeaders = buildReqHeaders(options?.headerOptions);
+  await page.setExtraHTTPHeaders(reqHeaders as Record<string, string>);
 
   let redirectCount = 0;
   let response: HTTPResponse | null | undefined;
@@ -265,6 +270,7 @@ async function webstripNav(
   if (!nav.time) cleanUp(); // no await here
 
   return {
+    reqHeaders,
     statusCode: response.status(),
     headers: response.headers(),
     data: content,
