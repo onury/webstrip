@@ -1,6 +1,6 @@
 // own modules
 import { WebstripOptions } from '../src/index.js';
-import { DEFAULT_REDIRECTS, ERR_NO_RESPONSE, ERR_NOT_FOUND, ERR_REDIRECT, webstrip } from '../src/webstrip.js';
+import { DEFAULT_REDIRECTS, ERR_NO_RESPONSE, ERR_NO_URL, ERR_NOT_FOUND, ERR_REDIRECT, webstrip } from '../src/webstrip.js';
 
 describe('webstrip', () => {
 
@@ -40,6 +40,11 @@ describe('webstrip', () => {
     }
   };
 
+  test('no URL', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((webstrip as any)()).rejects.toThrow(ERR_NO_URL);
+  });
+
   test('followRedirects', async () => {
     await Promise.all([
       testFollowRedirects(false),
@@ -78,10 +83,12 @@ describe('webstrip', () => {
 
   test('navigate, onPageClosed()', async () => {
     let counter = 0;
+    const navTimeout = 2; // seconds
     const result = await webstrip('https://www.google.com', {
-      navigate: 5,
+      navigate: navTimeout,
       onPageLoaded: async evaluate => {
-        await evaluate('document.body.innerHTML = "<h1>Close window to continue...</h1>"');
+        // eslint-disable-next-line max-len
+        await evaluate(`document.body.innerHTML = "<br /><br /><h1 style='text-align:center'>Testing <code>webstrip</code>...<br />Window should auto-close in ${navTimeout} seconds...</h1>"`);
       },
       onPageClosed: () => {
         counter += 1;
