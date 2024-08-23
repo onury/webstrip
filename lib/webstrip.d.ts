@@ -1,5 +1,6 @@
 import { WebstripOptions } from './types/WebstripOptions.js';
 import { WebstripResult } from './types/WebstripResult.js';
+export declare const ERR_NO_URL = "No URL is provided!";
 export declare const ERR_REDIRECT = "Too many redirects!";
 export declare const ERR_NO_RESPONSE = "No response from ";
 export declare const ERR_NOT_FOUND = "Address not found at ";
