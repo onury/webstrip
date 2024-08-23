@@ -5,6 +5,8 @@
     "declarationDir": "lib",
     "outDir": "lib",
     "sourceMap": true,
+    // prevent this from being included in the final build/lib dir
+    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
     "types": [
       "node",
       "vitest/globals",
