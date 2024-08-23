@@ -8,7 +8,7 @@ import {
   getRandomAccept,
   getReqHeaders,
   buildReqHeaders
-} from '../src/httpUtils.js';
+} from '../src/http.utils.js';
 
 describe('httpUtils', () => {
 
