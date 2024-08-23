@@ -2,11 +2,12 @@ backup
 _backup
 coverage/*
 test/.coverage/*
+test/run.ts
 node_modules
 npm-debug.log
 tmp
 TODO.md
 .vscode/
-lib/tsconfig.*.tsbuildinfo
-lib/tsconfig.tsbuildinfo
+*.tsbuildinfo
+lib/*.tsbuildinfo
 .DS_Store
