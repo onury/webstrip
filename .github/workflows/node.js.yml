@@ -8,12 +8,14 @@ on:
     branches: [ 'main' ]
     paths:
       - 'src/**'
+      - 'lib/**'
       - 'test/**'
       - '.github/workflows/**'
   pull_request:
     branches: [ 'main' ]
     paths:
       - 'src/**'
+      - 'lib/**'
       - 'test/**'
       - '.github/workflows/**'
 
