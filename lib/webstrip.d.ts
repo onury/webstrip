@@ -10,5 +10,6 @@ export declare const DEFAULT_REDIRECTS = 10;
  * @param url - The URL to strip.
  * @param [reqOptions] - Optional request header options.
  * @returns - A promise that resolves to the webstrip result.
+ * @throws If no URL is provided.
  */
 export declare function webstrip(url: string, options?: WebstripOptions): Promise<WebstripResult>;
