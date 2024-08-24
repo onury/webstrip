@@ -29,7 +29,7 @@
     "audit": "npm audit --production",
     "lint": "eslint -c .eslintrc.json --ext .ts src",
     "lint:ci": "eslint -c .eslintrc.ci.json --ext .ts src",
-    "build": "npm run lint && tsc --project tsconfig.build.json",
+    "build": "rimraf ./lib/* && npm run lint && tsc --project tsconfig.build.json",
     "build:ci": "npm run lint:ci && tsc --project tsconfig.build.json",
     "cli:js": "node --experimental-vm-modules --no-warnings ./lib/cli.js",
     "cli:ts": "npx tsx --experimental-vm-modules --no-warnings ./src/cli.ts",
