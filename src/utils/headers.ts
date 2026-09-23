@@ -1,5 +1,5 @@
-import { randomInt } from 'node:crypto';
 // core modules
+import { randomInt } from 'node:crypto';
 import type { OutgoingHttpHeaders } from 'node:http';
 
 // own modules
@@ -91,59 +91,81 @@ export const acceptMimes = [
 
 /**
  * Returns a random item from the given list.
- * @param list - The list of items.
+ *
+ * @param list - The list of items to pick from.
+ * @returns A uniformly chosen item of `list`.
+ *
+ * @example
+ * ```ts
+ * randomItem(['a', 'b', 'c']); // → 'b'
+ * ```
  */
-export function randomItem<T>(list: T[]): T {
-  return list[randomInt(0, list.length - 1)];
+export function randomItem<T>(list: readonly T[]): T {
+  // randomInt's upper bound is exclusive
+  return list[randomInt(list.length)] as T;
 }
 
 /**
- * Returns a random "User-Agent" header string for emulating a browser and
- * avoiding getting blocked.
+ * Returns a random "User-Agent" header value for emulating a browser.
+ *
+ * @returns One of the built-in user agent strings.
  */
 export function getRandomUserAgent(): string {
   return randomItem(userAgents);
 }
 
 /**
- * Returns a random "Accept-Language" header string for emulating a browser.
+ * Returns a random "Accept-Language" header value for emulating a browser.
+ *
+ * @returns One of the built-in language lists.
  */
 export function getRandomAcceptLanguage(): string {
   return randomItem(acceptLanguages);
 }
 
 /**
- * Returns a random "Accept-Encoding" header string for emulating a browser.
+ * Returns a random "Accept-Encoding" header value for emulating a browser.
+ *
+ * @returns One of the built-in encoding lists.
  */
 export function getRandomAcceptEncoding(): string {
   return randomItem(acceptEncodings);
 }
 
 /**
- * Returns a random "Accept" (MIME) header string for emulating a browser.
+ * Returns a random "Accept" (MIME) header value for emulating a browser.
+ *
+ * @returns One of the built-in MIME lists.
  */
 export function getRandomAccept(): string {
   return randomItem(acceptMimes);
 }
 
 function getHeaderValue(
-  list: string[],
+  list: readonly string[],
   inclusion?: HeaderInc | 'any',
   anyValue?: string
 ): string | undefined {
   if (!inclusion || inclusion === 'default') return list[0];
-  if (inclusion === 'any' && anyValue) return anyValue;
   if (inclusion === 'random') return randomItem(list);
-  return undefined;
+  return inclusion === 'any' ? anyValue : undefined;
 }
 
 /**
  * Returns a set of request headers for emulating a browser and avoiding
- * getting blocked.
- * @param [opts] - Request header options.
+ * getting blocked. Headers that resolve to nothing (e.g. `'none'`) are left out.
+ *
+ * @param opts - Request header options.
+ * @returns The generated request headers.
+ *
+ * @example
+ * ```ts
+ * getReqHeaders({ ua: 'random', dnt: false, keepAlive: true });
+ * ```
  */
 export function getReqHeaders(opts: ReqHeaderOptions = {}): OutgoingHttpHeaders {
-  let headers: OutgoingHttpHeaders = {
+  const noCache = opts.noCache !== false;
+  const headers: Record<string, string | undefined> = {
     'Accept-Language': getHeaderValue(acceptLanguages, opts.language, '*'),
     'Accept-Encoding': getHeaderValue(acceptEncodings, opts.encoding, '*'),
     Accept: getHeaderValue(acceptMimes, opts.mime, '*/*'),
@@ -151,34 +173,31 @@ export function getReqHeaders(opts: ReqHeaderOptions = {}): OutgoingHttpHeaders 
     Referer: getHeaderValue(referers, opts.referer),
     'Upgrade-Insecure-Requests': opts.secure === false ? undefined : '1',
     DNT: opts.dnt === false ? undefined : '1',
-    Connection:
-      opts.keepAlive === true ? 'keep-alive' : opts.keepAlive === false ? 'close' : undefined
+    Connection: opts.keepAlive === undefined ? undefined : opts.keepAlive ? 'keep-alive' : 'close',
+    'Cache-Control': noCache ? 'no-cache, no-store, must-revalidate, max-age=0' : undefined,
+    Pragma: noCache ? 'no-cache' : undefined,
+    Expires: noCache ? '0' : undefined
   };
-
-  if (opts.noCache !== false) {
-    headers = {
-      ...headers,
-      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-      Pragma: 'no-cache',
-      Expires: '0'
-    };
-  }
-
-  // remove undefined or empty headers
-  for (const key of Object.keys(headers)) {
-    if (!headers[key]) delete headers[key];
-  }
-  return headers as Record<string, string>;
+  // leave out the headers that resolved to nothing
+  return Object.fromEntries(Object.entries(headers).filter(([, value]) => value));
 }
 
+/** The "Accept" value sent when the `mime` option is not set. */
+export const DEFAULT_ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,text/*';
+
 /**
- * Builds the request headers for HTTP requests.
- * @param [reqOptions] - Optional request header options.
+ * Builds the headers that webstrip sends. When `reqOptions` is omitted, it
+ * picks a random user agent and keeps the connection alive. Unless the
+ * `encoding` or `mime` option is set, it asks for an uncompressed (identity)
+ * text response.
+ *
+ * @param reqOptions - Request header options.
+ * @returns The request headers to send.
  */
 export function buildReqHeaders(reqOptions?: ReqHeaderOptions): OutgoingHttpHeaders {
-  return {
-    ...getReqHeaders(reqOptions ?? { ua: 'random', keepAlive: true }),
-    'Accept-Encoding': 'identity',
-    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,text/*'
-  };
+  const opts = reqOptions ?? { ua: 'random', keepAlive: true };
+  const headers = getReqHeaders(opts);
+  if (!opts.encoding) headers['Accept-Encoding'] = 'identity';
+  if (!opts.mime) headers.Accept = DEFAULT_ACCEPT;
+  return headers;
 }
