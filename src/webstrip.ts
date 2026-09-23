@@ -158,7 +158,10 @@ async function stripWithBrowser(url: string, options: WebstripOptions): Promise<
   try {
     const [page] = (await browser.pages()) as [Page];
     const reqHeaders = buildReqHeaders(options.headerOptions);
-    await page.setExtraHTTPHeaders(reqHeaders as Record<string, string>);
+    // the Referer goes through goto() so that Chrome applies its referrer
+    // policy; forced as an extra header, it gets local-network requests blocked
+    const { Referer: referer, ...extraHeaders } = reqHeaders as Record<string, string>;
+    await page.setExtraHTTPHeaders(extraHeaders);
 
     const { followRedirects } = options;
     if (followRedirects !== undefined && followRedirects !== true) {
@@ -179,7 +182,7 @@ async function stripWithBrowser(url: string, options: WebstripOptions): Promise<
 
     let response: HTTPResponse | null;
     try {
-      response = await page.goto(url, { waitUntil });
+      response = await page.goto(url, { waitUntil, referer });
     } catch (e) {
       const err = getError(e, url);
       // any other failure is thrown as is
