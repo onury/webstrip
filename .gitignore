@@ -1,13 +1,16 @@
-backup
+.DS_Store
+_backup/
 _backup
 coverage/*
 test/.coverage/*
 test/run.ts
 node_modules
-npm-debug.log
 tmp
 TODO.md
 .vscode/
 *.tsbuildinfo
 lib/*.tsbuildinfo
-.DS_Store
+*.log*
+
+# ---- Author's working notes: planning, specs, working agreements ----
+_notes/
