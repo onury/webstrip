@@ -1,266 +1,221 @@
 // core modules
-import https, { type RequestOptions } from 'node:https';
+import http from 'node:http';
+import https from 'node:https';
 
 // dep modules
-import puppeteer, { type Browser, type HTTPResponse } from 'puppeteer';
+import type { Browser, HTTPResponse, Page } from 'puppeteer';
 
 // own modules
 import type { ReqOptions } from './types/ReqOptions.js';
 import type { WebstripOptions } from './types/WebstripOptions.js';
 import type { WebstripResult } from './types/WebstripResult.js';
-import { buildReqHeaders, REDIRECT_CODES } from './utils/headers.js';
+import { buildReqHeaders, decodeBody, REDIRECT_CODES } from './utils/index.js';
 
+/** Error message thrown when no URL is given. */
 export const ERR_NO_URL = 'No URL is provided!';
+/** Error message thrown when the redirect limit is reached and `redirectError` is on. */
 export const ERR_REDIRECT = 'Too many redirects!';
+/** Error message prefix (followed by the URL) thrown when no response is received. */
 export const ERR_NO_RESPONSE = 'No response from ';
+/** Error message prefix (followed by the URL) thrown when the host cannot be resolved. */
 export const ERR_NOT_FOUND = 'Address not found at ';
+/** Maximum number of redirects followed by default. */
 export const DEFAULT_REDIRECTS = 10;
 
 /** Gets the maximum number of redirects to follow. */
 function getMaxRedirects(followRedirects?: boolean | number): number {
-  return typeof followRedirects === 'number' && followRedirects >= 0
-    ? followRedirects
-    : followRedirects === false
-      ? 0
-      : DEFAULT_REDIRECTS;
+  if (typeof followRedirects === 'number' && followRedirects >= 0) return followRedirects;
+  return followRedirects === false ? 0 : DEFAULT_REDIRECTS;
 }
 
+/** Maps low-level request/navigation errors to webstrip's error messages. */
 function getError(e: unknown, url: string): Error {
-  const { code, message } = e as any;
-  const msg = code || message;
-
-  if (/ERR_INVALID_(URL|PROTOCOL)/i.test(msg)) {
-    return new Error(ERR_NO_RESPONSE + url);
-  }
-  if (/ENOTFOUND|ERR_NAME_NOT_RESOLVE/i.test(msg)) {
-    return new Error(ERR_NOT_FOUND + url);
-  }
-
-  return e instanceof Error ? e /* v8 ignore next */ : new Error(String(e));
+  const err = e as NodeJS.ErrnoException;
+  const msg = `${err.code} ${err.message}`;
+  if (/ERR_INVALID_(URL|PROTOCOL)/i.test(msg)) return new Error(ERR_NO_RESPONSE + url);
+  if (/ENOTFOUND|ERR_NAME_NOT_RESOLVED/i.test(msg)) return new Error(ERR_NOT_FOUND + url);
+  return err;
 }
 
-function getNavInfo(navigate?: WebstripOptions['navigate']) {
-  const time = typeof navigate === 'number' && navigate > 0 ? navigate * 1_000 : undefined;
-  return {
-    time,
-    enabled: navigate === true || Boolean(time)
-  };
+function getNavInfo(navigate?: WebstripOptions['navigate']): { time: number; enabled: boolean } {
+  const time = typeof navigate === 'number' && navigate > 0 ? navigate * 1_000 : 0;
+  return { time, enabled: navigate === true || time > 0 };
 }
 
 /**
- * Scrapes the specified URL and returns the result.
+ * Strips the given URL and returns its content along with the response
+ * details. A plain HTTP(S) request is used by default. A Chromium browser
+ * (via Puppeteer) is used instead when `waitUntil`, `navigate`,
+ * `onPageLoaded` or `onPageClosed` is set.
+ *
  * @param url - The URL to strip.
- * @param [reqOptions] - Optional request header options.
- * @returns - A promise that resolves to the webstrip result.
- * @throws If no URL is provided.
+ * @param options - Request, header and browser options.
+ * @returns A promise that resolves to the webstrip result.
+ * @throws If no URL is given, the host cannot be resolved, no response is
+ * received, or the redirect limit is reached while `redirectError` is on.
+ *
+ * @example
+ * ```ts
+ * import { webstrip } from 'webstrip';
+ *
+ * const { statusCode, data } = await webstrip('https://example.com');
+ * const rendered = await webstrip('https://example.com', { waitUntil: 'networkidle' });
+ * ```
  */
 export async function webstrip(url: string, options?: WebstripOptions): Promise<WebstripResult> {
   if (!url) throw new Error(ERR_NO_URL);
-
-  const nav = getNavInfo(options?.navigate);
+  const opts = options ?? {};
   const useBrowser =
-    nav.enabled ||
-    Boolean(options?.waitUntil) ||
-    typeof options?.onPageLoaded === 'function' ||
-    typeof options?.onPageClosed === 'function';
-
-  return useBrowser ? webstripNav(url, options) : webstripReq(url, options);
+    getNavInfo(opts.navigate).enabled ||
+    Boolean(opts.waitUntil) ||
+    typeof opts.onPageLoaded === 'function' ||
+    typeof opts.onPageClosed === 'function';
+  return useBrowser ? stripWithBrowser(url, opts) : stripWithRequest(url, opts);
 }
 
-/**
- * Strips the specified URL and returns the result.
- * @param url - The URL to strip.
- * @param [reqOptions] - Optional request header options.
- * @returns - A promise that resolves to the webstrip result.
- */
-async function webstripReq(url: string, reqOptions?: ReqOptions): Promise<WebstripResult> {
-  const redirectCount = 0;
-  return _webstripReq(url, reqOptions, redirectCount);
+/** Strips the given URL with a plain HTTP(S) request, following redirects. */
+function stripWithRequest(url: string, options: ReqOptions): Promise<WebstripResult> {
+  // generate the headers once so that every hop sends (and the result reports) the same set
+  const reqHeaders = buildReqHeaders(options.headerOptions);
+  return request(url, options, reqHeaders, 0);
 }
 
-async function _webstripReq(
+function request(
   url: string,
-  reqOptions?: ReqOptions,
-  redirectCount: number = 0
+  options: ReqOptions,
+  reqHeaders: WebstripResult['reqHeaders'],
+  redirectCount: number
 ): Promise<WebstripResult> {
   return new Promise((resolve, reject) => {
+    const fail = (e: unknown): void => reject(getError(e, url));
     try {
-      const reqHeaders = buildReqHeaders(reqOptions?.headerOptions);
-      const options: RequestOptions = {
-        headers: reqHeaders
-      };
-
-      https
-        .get(url, options, (response) => {
-          let data = '';
-          response.setEncoding('utf8');
-
-          response.on('data', (chunk: string) => {
-            data += chunk;
-          });
-
-          response.on('end', (): any => {
-            const { statusCode = 0, headers, url: resUrl } = response;
-
-            const { followRedirects } = reqOptions ?? {};
-            const maxRedirects = getMaxRedirects(followRedirects);
-
+      const client = new URL(url).protocol === 'http:' ? http : https;
+      client
+        .get(url, { headers: reqHeaders }, (response) => {
+          const chunks: Buffer[] = [];
+          response.on('data', (chunk: Buffer) => chunks.push(chunk));
+          response.on('error', fail);
+          response.on('end', () => {
+            const { statusCode = 0, headers } = response;
             if (headers.location && REDIRECT_CODES.includes(statusCode)) {
-              if (redirectCount < maxRedirects) {
-                redirectCount += 1;
-                return _webstripReq(headers.location, reqOptions, redirectCount)
-                  .then(resolve)
-                  .catch(reject);
+              if (redirectCount < getMaxRedirects(options.followRedirects)) {
+                // Location may be relative to the current URL
+                const next = new URL(headers.location, url).href;
+                request(next, options, reqHeaders, redirectCount + 1).then(resolve, reject);
+                return;
               }
-
-              if (reqOptions?.redirectError !== false) {
-                return reject(new Error(ERR_REDIRECT));
+              if (options.redirectError !== false) {
+                reject(new Error(ERR_REDIRECT));
+                return;
               }
               // else continue with the last response
             }
-
-            resolve({
-              reqHeaders,
-              statusCode,
-              headers,
-              data,
-              url: resUrl || url,
-              redirectCount
-            });
+            try {
+              const body = decodeBody(Buffer.concat(chunks), headers['content-encoding']);
+              resolve({
+                reqHeaders,
+                statusCode,
+                headers,
+                data: body.toString('utf8'),
+                url,
+                redirectCount
+              });
+            } catch (e) {
+              reject(e);
+            }
           });
         })
-        .on('error', (err) => {
-          reject(getError(err, url));
-        });
+        .on('error', fail);
     } catch (e) {
-      reject(getError(e, url));
+      fail(e);
     }
   });
 }
 
-async function waitForTargetDestroyed(browser: Browser, cb?: () => void): Promise<void> {
+/**
+ * Resolves when the page is closed (e.g. by the user) or the browser is
+ * disconnected (e.g. by the auto-close timer).
+ */
+function waitForClose(browser: Browser, page: Page): Promise<void> {
   return new Promise<void>((resolve) => {
-    browser.once('targetdestroyed', () => {
-      if (typeof cb === 'function') cb();
-      resolve();
-    });
+    page.once('close', () => resolve());
+    browser.once('disconnected', () => resolve());
   });
 }
 
-/**
- * Navigates to a URL and retrieves the content of the page using Puppeteer.
- * @param url - The URL to navigate to.
- * @param [options] - Optional configuration options.
- * @returns A promise that resolves to a WebstripResult object containing the
- * status code, headers, data, and URL of the page.
- * @throws If there is an error during navigation or if no response is received
- * from the URL.
- */
-async function webstripNav(url: string, options?: WebstripOptions): Promise<WebstripResult> {
-  const nav = getNavInfo(options?.navigate);
+/** Strips the given URL by navigating to it in a Chromium browser. */
+async function stripWithBrowser(url: string, options: WebstripOptions): Promise<WebstripResult> {
+  const nav = getNavInfo(options.navigate);
+  // loaded lazily so that plain HTTP stripping never pays for Puppeteer
+  const { default: puppeteer } = await import('puppeteer');
   const browser = await puppeteer.launch({
     headless: !nav.enabled,
     args: ['--no-sandbox'],
     defaultViewport: null
   });
+  const close = (): Promise<void> => browser.close().catch(() => undefined);
 
-  const [page] = await browser.pages();
-
-  const cleanUp = async (): Promise<void> => {
-    try {
-      // page.removeAllListeners();
-      return browser.close();
-      /* v8 ignore next */
-    } catch {}
-  };
-
-  const reqHeaders = buildReqHeaders(options?.headerOptions);
-  await page.setExtraHTTPHeaders(reqHeaders as Record<string, string>);
-
-  let redirectCount = 0;
-  let response: HTTPResponse | null | undefined;
-  const { followRedirects } = options /* v8 ignore next */ ?? {};
-  const unlimitedRedirects = followRedirects === undefined || followRedirects === true;
-
-  if (!unlimitedRedirects) {
-    const maxRedirects = getMaxRedirects(followRedirects);
-    await page.setRequestInterception(true);
-
-    page.on('request', async (interceptedReq) => {
-      // resolve if already handled
-      /* v8 ignore next */
-      if (interceptedReq.isInterceptResolutionHandled()) return;
-
-      if (!interceptedReq.isNavigationRequest()) {
-        return interceptedReq.continue();
-      }
-
-      const rcLen = interceptedReq.redirectChain().length;
-      if (rcLen <= maxRedirects) {
-        redirectCount = rcLen;
-        return interceptedReq.continue();
-      }
-
-      return interceptedReq.abort('aborted');
-    });
-  }
-
-  // for when to use networkidle0 or networkidle2,
-  // see https://github.com/puppeteer/puppeteer/issues/1552#issuecomment-350954419
-  const waitUntil =
-    options?.waitUntil === 'networkidle'
-      ? 'networkidle0'
-      : options?.onPageLoaded
-        ? 'load'
-        : options?.waitUntil;
-
-  // any call such as page.goto() will throw after req.abort() is set.
-  // so we set a more meaningful error here.
   try {
-    response = await page.goto(url, { waitUntil });
-  } catch (e) {
-    cleanUp(); // no await here
+    const [page] = (await browser.pages()) as [Page];
+    const reqHeaders = buildReqHeaders(options.headerOptions);
+    await page.setExtraHTTPHeaders(reqHeaders as Record<string, string>);
 
-    const err = getError(e, url);
-
-    /* v8 ignore next */
-    if (!/ERR_ABORTED/i.test(err.message)) throw err;
-
-    if (options?.redirectError !== false) {
-      throw new Error(ERR_REDIRECT);
+    let redirectCount = 0;
+    const { followRedirects } = options;
+    if (followRedirects !== undefined && followRedirects !== true) {
+      const maxRedirects = getMaxRedirects(followRedirects);
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        if (!req.isNavigationRequest()) return req.continue();
+        const chainLength = req.redirectChain().length;
+        if (chainLength > maxRedirects) return req.abort('aborted');
+        redirectCount = chainLength;
+        return req.continue();
+      });
     }
-    // response body is unavailable if the request gets redirected and aborted
-    // (due to followRedirects option) so we'll attempt to re-fetch the response
-    // via HTTP when `redirectError` option is disabled.
-    return webstripReq(url, options);
+
+    // networkidle0 rather than networkidle2; see
+    // https://github.com/puppeteer/puppeteer/issues/1552#issuecomment-350954419
+    const waitUntil =
+      options.waitUntil === 'networkidle'
+        ? 'networkidle0'
+        : (options.waitUntil ?? (options.onPageLoaded ? 'load' : undefined));
+
+    let response: HTTPResponse | null;
+    try {
+      response = await page.goto(url, { waitUntil });
+    } catch (e) {
+      const err = getError(e, url);
+      // any other failure is thrown as is
+      if (!/ERR_ABORTED/i.test(err.message)) throw err;
+      // the navigation was aborted by the redirect limit above
+      if (options.redirectError !== false) throw new Error(ERR_REDIRECT);
+      // the body of an aborted redirect is unavailable to the browser, so
+      // re-fetch the last response over HTTP
+      return await stripWithRequest(url, options);
+    }
+
+    if (!response) throw new Error(ERR_NO_RESPONSE + url);
+
+    if (options.onPageLoaded) await options.onPageLoaded(page.evaluate.bind(page));
+    const data = await page.content();
+
+    if (nav.enabled) {
+      const timer = nav.time ? setTimeout(close, nav.time) : undefined;
+      await waitForClose(browser, page);
+      clearTimeout(timer);
+      options.onPageClosed?.();
+    }
+
+    return {
+      reqHeaders,
+      statusCode: response.status(),
+      headers: response.headers(),
+      data,
+      url: response.url(),
+      redirectCount
+    };
+  } finally {
+    await close();
   }
-
-  if (!response) {
-    cleanUp();
-    throw new Error(ERR_NO_RESPONSE + url);
-  }
-
-  if (options?.onPageLoaded) {
-    await options.onPageLoaded(page.evaluate.bind(page));
-  }
-
-  const content = await page.content();
-
-  if (nav.enabled) {
-    // Waiting for nav.time ms to auto-close browser...
-    if (nav.time) setTimeout(cleanUp, nav.time);
-    // also waiting for browser to be closed...
-    await waitForTargetDestroyed(browser, options?.onPageClosed);
-  }
-  // not already called?
-  if (!nav.time) cleanUp(); // no await here
-
-  return {
-    reqHeaders,
-    statusCode: response.status(),
-    headers: response.headers(),
-    data: content,
-    url: response.url(),
-    redirectCount
-  };
 }
