@@ -1,17 +1,18 @@
+// core modules
 import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'node:http';
 
-/** Represents the result of a webstrip operation. */
+/** The result of a webstrip call. */
 export interface WebstripResult {
-  /** The headers of the HTTP response. */
+  /** The generated request headers that were sent. */
   reqHeaders: OutgoingHttpHeaders;
-  /** The status code of the HTTP response. */
+  /** The HTTP status code of the (last) response. */
   statusCode: number;
-  /** The headers of the HTTP response. */
+  /** The response headers received. */
   headers: IncomingHttpHeaders;
-  /** The data stripped from the response. */
+  /** The response body, or the page content in browser mode. */
   data: string;
-  /** The URL that was stripped. */
+  /** The final URL, after any redirects. */
   url: string;
-  /** The total number of redirects occurred. */
+  /** The number of redirects followed. */
   redirectCount: number;
 }

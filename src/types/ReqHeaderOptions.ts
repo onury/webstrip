@@ -1,53 +1,67 @@
+/**
+ * What a generated header should contain: the first built-in value
+ * (`'default'`), a random built-in value (`'random'`), or nothing (`'none'`).
+ */
 export type HeaderInc = 'default' | 'random' | 'none';
 
-/** Options for generating HTTP request headers. */
+/**
+ * Options for generating the request headers. When `headerOptions` is omitted
+ * altogether, webstrip picks a random user agent and keeps the connection alive.
+ *
+ * @example
+ * ```ts
+ * const headerOptions: ReqHeaderOptions = { ua: 'random', referer: 'none', dnt: false };
+ * ```
+ */
 export interface ReqHeaderOptions {
   /**
-   * Indicates what should be included in the "Accept-Language" header.
-   * @default 'default'
+   * What the "Accept-Language" header contains. `'any'` sends `*`.
+   * @defaultValue `'default'`
    */
   language?: HeaderInc | 'any';
   /**
-   * Indicates what should be included in the "Accept-Encoding" header.
-   * @default 'default'
+   * What the "Accept-Encoding" header contains. `'any'` sends `*`. When not
+   * set, an uncompressed (identity) response is requested. Compressed HTTP
+   * responses (gzip, deflate, br) are decoded.
+   * @defaultValue `undefined`
    */
   encoding?: HeaderInc | 'any';
   /**
-   * Indicates what should be included in the "Accept" (MIME) header.
-   * @default 'default'
+   * What the "Accept" (MIME) header contains. `'any'` sends `*\/*`. When not
+   * set, HTML, XML and text are accepted.
+   * @defaultValue `undefined`
    */
   mime?: HeaderInc | 'any';
   /**
-   * Indicates what should be included in the "User-Agent" header.
-   * @default 'default'
+   * What the "User-Agent" header contains.
+   * @defaultValue `'default'`
    */
   ua?: HeaderInc;
   /**
-   * Indicates what should be included in the "Referer" header.
-   * @default 'default'
+   * What the "Referer" header contains.
+   * @defaultValue `'default'`
    */
   referer?: HeaderInc;
   /**
-   * Whether the response should not be cached.
-   * @default true
+   * Whether to send the no-cache headers ("Cache-Control", "Pragma", "Expires").
+   * @defaultValue `true`
    */
   noCache?: boolean;
   /**
-   * Whether to upgrade insecure (HTTP) requests to secure (HTTPS) requests.
-   * @default true
+   * Whether to send the "Upgrade-Insecure-Requests" header.
+   * @defaultValue `true`
    */
   secure?: boolean;
   /**
-   * Whether to enable the "Do Not Track" (DNT) header.
-   * @default true
+   * Whether to send the "Do Not Track" (DNT) header.
+   * @defaultValue `true`
    */
   dnt?: boolean;
   /**
-   * Whether to keep the connection alive.
-   * `true` will set the "Connection" header to "keep-alive".
-   * `false` will set the "Connection" header to "close".
-   * Omitting this will not set the "Connection" header.
-   * @default undefined
+   * Whether to keep the connection alive. `true` sends "Connection:
+   * keep-alive", `false` sends "Connection: close", and leaving it out sends
+   * no "Connection" header.
+   * @defaultValue `undefined`
    */
   keepAlive?: boolean;
 }
