@@ -160,17 +160,13 @@ async function stripWithBrowser(url: string, options: WebstripOptions): Promise<
     const reqHeaders = buildReqHeaders(options.headerOptions);
     await page.setExtraHTTPHeaders(reqHeaders as Record<string, string>);
 
-    let redirectCount = 0;
     const { followRedirects } = options;
     if (followRedirects !== undefined && followRedirects !== true) {
       const maxRedirects = getMaxRedirects(followRedirects);
       await page.setRequestInterception(true);
       page.on('request', (req) => {
         if (!req.isNavigationRequest()) return req.continue();
-        const chainLength = req.redirectChain().length;
-        if (chainLength > maxRedirects) return req.abort('aborted');
-        redirectCount = chainLength;
-        return req.continue();
+        return req.redirectChain().length > maxRedirects ? req.abort('aborted') : req.continue();
       });
     }
 
@@ -213,7 +209,7 @@ async function stripWithBrowser(url: string, options: WebstripOptions): Promise<
       headers: response.headers(),
       data,
       url: response.url(),
-      redirectCount
+      redirectCount: response.request().redirectChain().length
     };
   } finally {
     await close();
