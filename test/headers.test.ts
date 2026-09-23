@@ -1,17 +1,16 @@
 // own modules
-import { OutgoingHttpHeaders } from 'http';
+import type { OutgoingHttpHeaders } from 'node:http';
 import {
-  randomItem,
-  getRandomUserAgent,
-  getRandomAcceptLanguage,
-  getRandomAcceptEncoding,
+  buildReqHeaders,
   getRandomAccept,
+  getRandomAcceptEncoding,
+  getRandomAcceptLanguage,
+  getRandomUserAgent,
   getReqHeaders,
-  buildReqHeaders
-} from '../src/http.utils.js';
+  randomItem
+} from '../src/utils/headers.js';
 
 describe('httpUtils', () => {
-
   test('randomItem', () => {
     const items = ['a', 'b', 'c'];
     const item = randomItem(items);
@@ -52,26 +51,28 @@ describe('httpUtils', () => {
   test('getReqHeaders(), buildReqHeaders()', () => {
     let h: OutgoingHttpHeaders | undefined;
     testHeaders(getReqHeaders());
-    h = testHeaders(getReqHeaders({
-      dnt: false,
-      keepAlive: true,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      referer: 'x' as any
-    }));
+    h = testHeaders(
+      getReqHeaders({
+        dnt: false,
+        keepAlive: true,
+        referer: 'x' as any
+      })
+    );
     expect(h.referer).toBeUndefined();
     expect(h.Connection).toBe('keep-alive');
 
     testHeaders(buildReqHeaders());
-    h = testHeaders(buildReqHeaders({
-      dnt: false,
-      keepAlive: false,
-      referer: 'default',
-      mime: 'any',
-      secure: false
-    }));
+    h = testHeaders(
+      buildReqHeaders({
+        dnt: false,
+        keepAlive: false,
+        referer: 'default',
+        mime: 'any',
+        secure: false
+      })
+    );
     expect(h.Connection).toBe('close');
     expect(h).toHaveProperty('Referer');
     expect(h).not.toHaveProperty('Upgrade-Insecure-Requests');
   });
-
 });

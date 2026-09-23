@@ -1,4 +1,4 @@
-import { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
+import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'node:http';
 
 /** Represents the result of a webstrip operation. */
 export interface WebstripResult {

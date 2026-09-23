@@ -1,14 +1,14 @@
 // core modules
-import https, { RequestOptions } from 'node:https';
+import https, { type RequestOptions } from 'node:https';
 
 // dep modules
-import puppeteer, { HTTPResponse } from 'puppeteer';
+import puppeteer, { type Browser, type HTTPResponse } from 'puppeteer';
 
 // own modules
-import { ReqOptions } from './types/ReqOptions.js';
-import { WebstripOptions } from './types/WebstripOptions.js';
-import { WebstripResult } from './types/WebstripResult.js';
-import { REDIRECT_CODES, buildReqHeaders } from './http.utils.js';
+import type { ReqOptions } from './types/ReqOptions.js';
+import type { WebstripOptions } from './types/WebstripOptions.js';
+import type { WebstripResult } from './types/WebstripResult.js';
+import { buildReqHeaders, REDIRECT_CODES } from './utils/headers.js';
 
 export const ERR_NO_URL = 'No URL is provided!';
 export const ERR_REDIRECT = 'Too many redirects!';
@@ -18,14 +18,14 @@ export const DEFAULT_REDIRECTS = 10;
 
 /** Gets the maximum number of redirects to follow. */
 function getMaxRedirects(followRedirects?: boolean | number): number {
-  return typeof followRedirects === 'number'
-    && followRedirects >= 0
+  return typeof followRedirects === 'number' && followRedirects >= 0
     ? followRedirects
-    : followRedirects === false ? 0 : DEFAULT_REDIRECTS;
+    : followRedirects === false
+      ? 0
+      : DEFAULT_REDIRECTS;
 }
 
 function getError(e: unknown, url: string): Error {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { code, message } = e as any;
   const msg = code || message;
 
@@ -39,7 +39,6 @@ function getError(e: unknown, url: string): Error {
   return e instanceof Error ? e /* v8 ignore next */ : new Error(String(e));
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function getNavInfo(navigate?: WebstripOptions['navigate']) {
   const time = typeof navigate === 'number' && navigate > 0 ? navigate * 1_000 : undefined;
   return {
@@ -55,21 +54,17 @@ function getNavInfo(navigate?: WebstripOptions['navigate']) {
  * @returns - A promise that resolves to the webstrip result.
  * @throws If no URL is provided.
  */
-export async function webstrip(
-  url: string,
-  options?: WebstripOptions
-): Promise<WebstripResult> {
+export async function webstrip(url: string, options?: WebstripOptions): Promise<WebstripResult> {
   if (!url) throw new Error(ERR_NO_URL);
 
   const nav = getNavInfo(options?.navigate);
-  const useBrowser = nav.enabled
-    || Boolean(options?.waitUntil)
-    || typeof options?.onPageLoaded === 'function'
-    || typeof options?.onPageClosed === 'function';
+  const useBrowser =
+    nav.enabled ||
+    Boolean(options?.waitUntil) ||
+    typeof options?.onPageLoaded === 'function' ||
+    typeof options?.onPageClosed === 'function';
 
-  return useBrowser
-    ? webstripNav(url, options)
-    : webstripReq(url, options);
+  return useBrowser ? webstripNav(url, options) : webstripReq(url, options);
 }
 
 /**
@@ -78,10 +73,7 @@ export async function webstrip(
  * @param [reqOptions] - Optional request header options.
  * @returns - A promise that resolves to the webstrip result.
  */
-async function webstripReq(
-  url: string,
-  reqOptions?: ReqOptions
-): Promise<WebstripResult> {
+async function webstripReq(url: string, reqOptions?: ReqOptions): Promise<WebstripResult> {
   const redirectCount = 0;
   return _webstripReq(url, reqOptions, redirectCount);
 }
@@ -91,7 +83,6 @@ async function _webstripReq(
   reqOptions?: ReqOptions,
   redirectCount: number = 0
 ): Promise<WebstripResult> {
-
   return new Promise((resolve, reject) => {
     try {
       const reqHeaders = buildReqHeaders(reqOptions?.headerOptions);
@@ -99,58 +90,56 @@ async function _webstripReq(
         headers: reqHeaders
       };
 
-      https.get(url, options, response => {
-        let data = '';
-        response.setEncoding('utf8');
+      https
+        .get(url, options, (response) => {
+          let data = '';
+          response.setEncoding('utf8');
 
-        response.on('data', (chunk: string) => {
-          data += chunk;
-        });
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        response.on('end', (): any => {
-          const { statusCode = 0, headers, url: resUrl } = response;
-
-          const { followRedirects } = reqOptions ?? {};
-          const maxRedirects = getMaxRedirects(followRedirects);
-
-          if (headers.location && REDIRECT_CODES.includes(statusCode)) {
-            if (redirectCount < maxRedirects) {
-              redirectCount += 1;
-              return _webstripReq(headers.location, reqOptions, redirectCount)
-                .then(resolve)
-                .catch(reject);
-            }
-
-            if (reqOptions?.redirectError !== false) {
-              return reject(new Error(ERR_REDIRECT));
-            }
-            // else continue with the last response
-          }
-
-          resolve({
-            reqHeaders,
-            statusCode,
-            headers,
-            data,
-            url: resUrl || url,
-            redirectCount
+          response.on('data', (chunk: string) => {
+            data += chunk;
           });
 
-        });
-      }).on('error', err => {
-        reject(getError(err, url));
-      });
+          response.on('end', (): any => {
+            const { statusCode = 0, headers, url: resUrl } = response;
 
-    }
-    catch (e) {
+            const { followRedirects } = reqOptions ?? {};
+            const maxRedirects = getMaxRedirects(followRedirects);
+
+            if (headers.location && REDIRECT_CODES.includes(statusCode)) {
+              if (redirectCount < maxRedirects) {
+                redirectCount += 1;
+                return _webstripReq(headers.location, reqOptions, redirectCount)
+                  .then(resolve)
+                  .catch(reject);
+              }
+
+              if (reqOptions?.redirectError !== false) {
+                return reject(new Error(ERR_REDIRECT));
+              }
+              // else continue with the last response
+            }
+
+            resolve({
+              reqHeaders,
+              statusCode,
+              headers,
+              data,
+              url: resUrl || url,
+              redirectCount
+            });
+          });
+        })
+        .on('error', (err) => {
+          reject(getError(err, url));
+        });
+    } catch (e) {
       reject(getError(e, url));
     }
   });
 }
 
-async function waitForTargetDestroyed(browser: puppeteer.Browser, cb?: () => void): Promise<void> {
-  return new Promise<void>(resolve => {
+async function waitForTargetDestroyed(browser: Browser, cb?: () => void): Promise<void> {
+  return new Promise<void>((resolve) => {
     browser.once('targetdestroyed', () => {
       if (typeof cb === 'function') cb();
       resolve();
@@ -167,11 +156,7 @@ async function waitForTargetDestroyed(browser: puppeteer.Browser, cb?: () => voi
  * @throws If there is an error during navigation or if no response is received
  * from the URL.
  */
-async function webstripNav(
-  url: string,
-  options?: WebstripOptions
-): Promise<WebstripResult> {
-
+async function webstripNav(url: string, options?: WebstripOptions): Promise<WebstripResult> {
   const nav = getNavInfo(options?.navigate);
   const browser = await puppeteer.launch({
     headless: !nav.enabled,
@@ -201,7 +186,7 @@ async function webstripNav(
     const maxRedirects = getMaxRedirects(followRedirects);
     await page.setRequestInterception(true);
 
-    page.on('request', async interceptedReq => {
+    page.on('request', async (interceptedReq) => {
       // resolve if already handled
       /* v8 ignore next */
       if (interceptedReq.isInterceptResolutionHandled()) return;
@@ -222,11 +207,12 @@ async function webstripNav(
 
   // for when to use networkidle0 or networkidle2,
   // see https://github.com/puppeteer/puppeteer/issues/1552#issuecomment-350954419
-  const waitUntil = options?.waitUntil === 'networkidle'
-    ? 'networkidle0'
-    : options?.onPageLoaded
-      ? 'load'
-      : options?.waitUntil;
+  const waitUntil =
+    options?.waitUntil === 'networkidle'
+      ? 'networkidle0'
+      : options?.onPageLoaded
+        ? 'load'
+        : options?.waitUntil;
 
   // any call such as page.goto() will throw after req.abort() is set.
   // so we set a more meaningful error here.

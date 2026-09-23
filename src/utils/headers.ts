@@ -1,11 +1,9 @@
-/* eslint-disable max-len */
-
-// core modules
-import { OutgoingHttpHeaders } from 'node:http';
 import { randomInt } from 'node:crypto';
+// core modules
+import type { OutgoingHttpHeaders } from 'node:http';
 
 // own modules
-import { HeaderInc, ReqHeaderOptions } from './types/ReqHeaderOptions.js';
+import type { HeaderInc, ReqHeaderOptions } from '../types/ReqHeaderOptions.js';
 
 // constants
 export const REDIRECT_CODES = [301, 302, 303, 307, 308];
@@ -128,7 +126,11 @@ export function getRandomAccept(): string {
   return randomItem(acceptMimes);
 }
 
-function getHeaderValue(list: string[], inclusion?: HeaderInc | 'any', anyValue?: string): string | undefined {
+function getHeaderValue(
+  list: string[],
+  inclusion?: HeaderInc | 'any',
+  anyValue?: string
+): string | undefined {
   if (!inclusion || inclusion === 'default') return list[0];
   if (inclusion === 'any' && anyValue) return anyValue;
   if (inclusion === 'random') return randomItem(list);
@@ -144,29 +146,28 @@ export function getReqHeaders(opts: ReqHeaderOptions = {}): OutgoingHttpHeaders 
   let headers: OutgoingHttpHeaders = {
     'Accept-Language': getHeaderValue(acceptLanguages, opts.language, '*'),
     'Accept-Encoding': getHeaderValue(acceptEncodings, opts.encoding, '*'),
-    'Accept': getHeaderValue(acceptMimes, opts.mime, '*/*'),
+    Accept: getHeaderValue(acceptMimes, opts.mime, '*/*'),
     'User-Agent': getHeaderValue(userAgents, opts.ua),
-    'Referer': getHeaderValue(referers, opts.referer),
+    Referer: getHeaderValue(referers, opts.referer),
     'Upgrade-Insecure-Requests': opts.secure === false ? undefined : '1',
-    'DNT': opts.dnt === false ? undefined : '1',
-    'Connection': opts.keepAlive === true
-      ? 'keep-alive'
-      : opts.keepAlive === false
-        ? 'close'
-        : undefined
+    DNT: opts.dnt === false ? undefined : '1',
+    Connection:
+      opts.keepAlive === true ? 'keep-alive' : opts.keepAlive === false ? 'close' : undefined
   };
 
   if (opts.noCache !== false) {
     headers = {
       ...headers,
       'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-      'Pragma': 'no-cache',
-      'Expires': '0'
+      Pragma: 'no-cache',
+      Expires: '0'
     };
   }
 
   // remove undefined or empty headers
-  Object.keys(headers).forEach(key => !headers[key] && delete headers[key]);
+  for (const key of Object.keys(headers)) {
+    if (!headers[key]) delete headers[key];
+  }
   return headers as Record<string, string>;
 }
 
@@ -178,6 +179,6 @@ export function buildReqHeaders(reqOptions?: ReqHeaderOptions): OutgoingHttpHead
   return {
     ...getReqHeaders(reqOptions ?? { ua: 'random', keepAlive: true }),
     'Accept-Encoding': 'identity',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,text/*'
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,text/*'
   };
 }

@@ -1,6 +1,6 @@
 // own modules
-import { Page } from 'puppeteer';
-import { ReqOptions } from './ReqOptions.js';
+import type { Page } from 'puppeteer';
+import type { ReqOptions } from './ReqOptions.js';
 
 /** Options for a webstrip operation. */
 export interface WebstripOptions extends ReqOptions {

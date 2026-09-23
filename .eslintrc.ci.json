@@ -1,9 +1,0 @@
-{
-  "extends": [
-    "eslint-config-oy/ts"
-  ],
-  "rules": {
-    // Allow CRLF linebreaks in CI (windows) environment.
-    "linebreak-style": 0
-  }
-}

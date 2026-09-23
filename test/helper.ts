@@ -1,6 +1,3 @@
-/* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // dep modules
 import { main } from '../src/cli.js';
 
@@ -96,7 +93,10 @@ function parseArgs(input?: string): string[] {
  * @param values - The values to be interpolated into the template.
  * @returns A promise that resolves to the captured output.
  */
-export const $ = async (strings: TemplateStringsArray, ...values: any[]): Promise<CapturedOutput> => {
+export const $ = async (
+  strings: TemplateStringsArray,
+  ...values: any[]
+): Promise<CapturedOutput> => {
   const args = strings.reduce((acc, str, i) => acc + str + (values[i] || ''), '');
   return captureConsoleOutput(async () => {
     await main(parseArgs(args));

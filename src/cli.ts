@@ -1,32 +1,30 @@
 #! /usr/bin/env node
 
-/* eslint-disable quote-props */
-/* eslint-disable no-console */
-
 // core modules
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // dep modules
-import { meows, chalk } from 'meow-styler';
-
+import { chalk, meows } from 'meow-styler';
+import type { ReqHeaderOptions } from './types/ReqHeaderOptions.js';
+import type { WebstripOptions } from './types/WebstripOptions.js';
 // own modules
 import { ERR_NO_URL, webstrip } from './webstrip.js';
-import { WebstripOptions } from './types/WebstripOptions.js';
-import { ReqHeaderOptions } from './types/ReqHeaderOptions.js';
 
 // constants
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
 const currentFilePath = resolve(fileURLToPath(import.meta.url));
 const realPathReceived = process.argv[1]
-  ? fs.realpathSync(resolve(process.argv[1].trim())) /* v8 ignore next */ : undefined;
+  ? fs.realpathSync(resolve(process.argv[1].trim())) /* v8 ignore next */
+  : undefined;
 /**
  * Indicates whether this script is called directly from the command line. We
  * need this to make the CLI mockable while testing.
  */
 const commandLineCall = realPathReceived
-  ? currentFilePath.includes(realPathReceived) /* v8 ignore next */ : false;
+  ? currentFilePath.includes(realPathReceived) /* v8 ignore next */
+  : false;
 
 type ExitFn = () => never;
 
@@ -42,11 +40,24 @@ export async function main(args?: string[]): Promise<ExitFn> {
     argv: args ?? process.argv.slice(2),
     autoHelp: false,
     description: pkg.description,
-    usage: c => c.dim.cyan('$') + c.blueBright(' webstrip ') + c.cyan('<url> ') + c.green.dim('[options]'),
-    examples: ({ cyan, blueBright, green, white  }) => cyan.dim('$')
-      + blueBright(' webstrip ') + cyan('https://google.com') + green(' -f ') + white('5') + green(' --ua ') + white('random')
-      + '\n' + cyan.dim('$') + blueBright(' webstrip ') + cyan('https://amazon.com')
-      + green(' -w ') + white('load') + green(' -e ') + white('"document.querySelector(\'#navbar\').remove()"'),
+    usage: (c) =>
+      c.dim.cyan('$') + c.blueBright(' webstrip ') + c.cyan('<url> ') + c.green.dim('[options]'),
+    examples: ({ cyan, blueBright, green, white }) =>
+      cyan.dim('$') +
+      blueBright(' webstrip ') +
+      cyan('https://google.com') +
+      green(' -f ') +
+      white('5') +
+      green(' --ua ') +
+      white('random') +
+      '\n' +
+      cyan.dim('$') +
+      blueBright(' webstrip ') +
+      cyan('https://amazon.com') +
+      green(' -w ') +
+      white('load') +
+      green(' -e ') +
+      white('"document.querySelector(\'#navbar\').remove()"'),
     importMeta: import.meta, // required
     booleanDefault: undefined,
     allowUnknownFlags: false,
@@ -56,7 +67,7 @@ export async function main(args?: string[]): Promise<ExitFn> {
       spacing: 2,
       indent: 2
     },
-    colors: c => ({
+    colors: (c) => ({
       title: 'yellow.bold',
       flag: c.greenBright,
       flagDescription: 'white'
@@ -72,21 +83,22 @@ export async function main(args?: string[]): Promise<ExitFn> {
         description: 'Maximum number of redirects to follow.',
         type: 'number',
         shortFlag: 'f',
-        'default': 10
+        default: 10
       },
       redirectError: {
         description: 'Whether to throw when redirect limit is reached.',
         type: 'boolean',
-        'default': true
+        default: true
       },
       navigate: {
-        description: 'Open chromium browser, instead of silent stripping. '
-          + 'Pass a number to set a timeout (in seconds) to auto-close the browser.',
+        description:
+          'Open chromium browser, instead of silent stripping. ' +
+          'Pass a number to set a timeout (in seconds) to auto-close the browser.',
         type: 'number',
         shortFlag: 'n'
       },
       eval: {
-        description: 'Evaluate a script on the page\'s context before stripping.',
+        description: "Evaluate a script on the page's context before stripping.",
         type: 'string',
         shortFlag: 'e'
       },
@@ -96,7 +108,7 @@ export async function main(args?: string[]): Promise<ExitFn> {
         shortFlag: 'o',
         choices: ['json', 'text'],
         isMultiple: false,
-        'default': 'text'
+        default: 'text'
       },
       // header options
       language: {
@@ -127,17 +139,17 @@ export async function main(args?: string[]): Promise<ExitFn> {
       noCache: {
         description: 'Whether the response should not be cached.',
         type: 'boolean',
-        'default': true
+        default: true
       },
       secure: {
         description: 'Whether to upgrade insecure (HTTP) requests to secure (HTTPS) requests.',
         type: 'boolean',
-        'default': true
+        default: true
       },
       dnt: {
         description: 'Whether to enable the "Do Not Track" (DNT) header.',
         type: 'boolean',
-        'default': true
+        default: true
       },
       keepAlive: {
         description: 'Whether to keep the connection alive.',
@@ -154,7 +166,6 @@ export async function main(args?: string[]): Promise<ExitFn> {
   const { flags } = cli;
 
   try {
-
     if (flags.help) {
       console.log(cli.help);
       return () => process.exit(0);
@@ -167,17 +178,21 @@ export async function main(args?: string[]): Promise<ExitFn> {
       return () => process.exit(2);
     }
 
-    const options: WebstripOptions =  {
+    const options: WebstripOptions = {
       waitUntil: flags.waitUntil as WebstripOptions['waitUntil'],
       followRedirects: flags.followRedirects,
       redirectError: flags.redirectError,
-      navigate: 'navigate' in flags
-        /* v8 ignore next */
-        ? !flags.navigate ? true // truthy when 0 or undefined
-          : flags.navigate
-        : false,
+      navigate:
+        'navigate' in flags
+          ? /* v8 ignore next */
+            !flags.navigate
+            ? true // truthy when 0 or undefined
+            : flags.navigate
+          : false,
       onPageLoaded: flags.eval
-        ? async evaluate => { evaluate(flags.eval); }
+        ? async (evaluate) => {
+            evaluate(flags.eval);
+          }
         : undefined,
       headerOptions: {
         language: flags.language as ReqHeaderOptions['language'],
@@ -195,15 +210,14 @@ export async function main(args?: string[]): Promise<ExitFn> {
     const result = await webstrip(url, options);
     if (flags.output === 'json') {
       console.info(JSON.stringify(result, null, 2));
-    }
-    else {
+    } else {
       console.info(chalk.cyan('Request URL   :'), result.url);
       console.info(chalk.cyan('Status Code   :'), result.statusCode);
       console.info(chalk.cyan('Redirect Count:'), result.redirectCount);
       const headerNames = Object.keys(result.headers);
       const width = headerNames.reduce((w, key) => Math.max(w, key.length), 0);
       console.info(chalk.cyan('\nResponse Headers:'));
-      headerNames.forEach(key => {
+      headerNames.forEach((key) => {
         console.info(`${key.padEnd(width)}: ${result.headers[key]}`);
       });
       console.info(chalk.cyan('\nResponse Body:'));
@@ -219,7 +233,6 @@ export async function main(args?: string[]): Promise<ExitFn> {
     return () => process.exit(1);
   }
   /* v8 ignore stop */
-
 }
 
 // only execute if the script is being run directly from the command line

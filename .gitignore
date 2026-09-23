@@ -1,16 +1,18 @@
-.DS_Store
-_backup/
-_backup
-coverage/*
-test/.coverage/*
-test/run.ts
 node_modules
+package-lock.json
+lib
+coverage
+test/coverage
+test/stryker
+.stryker-tmp
+*.tsbuildinfo
+npm-debug.log
+_backup/
+wiki
 tmp
 TODO.md
 .vscode/
-*.tsbuildinfo
-lib/*.tsbuildinfo
-*.log*
+.DS_Store
 
 # ---- Author's working notes: planning, specs, working agreements ----
 _notes/

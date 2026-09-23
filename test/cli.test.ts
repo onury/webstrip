@@ -3,9 +3,8 @@ import { ERR_NO_URL } from '../src/webstrip.js';
 import { $, main } from './helper.js';
 
 describe('cli', () => {
-
   test('cli main fn', async () => {
-    expect((await main())).toBeTypeOf('function');
+    expect(await main()).toBeTypeOf('function');
   });
 
   test('no URL', async () => {
@@ -38,7 +37,8 @@ describe('cli', () => {
   });
 
   test('--eval', async () => {
-    const { stdout, stderr } = await $`https://example.com --eval 'document.body.innerHTML="testing cli"'`;
+    const { stdout, stderr } =
+      await $`https://example.com --eval 'document.body.innerHTML="testing cli"'`;
     expect(stderr).toBe('');
     expect(stdout).toMatch('testing cli');
   });
@@ -46,5 +46,4 @@ describe('cli', () => {
   test('unknown flag', async () => {
     expect(() => $`https://example.com --unknown`).rejects.toThrow();
   });
-
 });

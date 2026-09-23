@@ -1,14 +1,21 @@
 // own modules
-import { WebstripOptions } from '../src/index.js';
-import { DEFAULT_REDIRECTS, ERR_NO_RESPONSE, ERR_NO_URL, ERR_NOT_FOUND, ERR_REDIRECT, webstrip } from '../src/webstrip.js';
+import type { WebstripOptions } from '../src/index.js';
+import {
+  DEFAULT_REDIRECTS,
+  ERR_NO_RESPONSE,
+  ERR_NO_URL,
+  ERR_NOT_FOUND,
+  ERR_REDIRECT,
+  webstrip
+} from '../src/webstrip.js';
 
 describe('webstrip', () => {
-
   const getMaxRedirects = (followRedirects?: boolean | number): number => {
-    return typeof followRedirects === 'number'
-      && followRedirects >= 0
+    return typeof followRedirects === 'number' && followRedirects >= 0
       ? followRedirects
-      : followRedirects === false ? 0 : DEFAULT_REDIRECTS;
+      : followRedirects === false
+        ? 0
+        : DEFAULT_REDIRECTS;
   };
 
   const testFollowRedirects = async (
@@ -41,7 +48,6 @@ describe('webstrip', () => {
   };
 
   test('no URL', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((webstrip as any)()).rejects.toThrow(ERR_NO_URL);
   });
 
@@ -73,8 +79,8 @@ describe('webstrip', () => {
 
   test('onPageLoad()', async () => {
     const result = await webstrip('https://amazon.com', {
-      onPageLoaded: async evaluate => {
-        const title = await evaluate('document.title') as string;
+      onPageLoaded: async (evaluate) => {
+        const title = (await evaluate('document.title')) as string;
         expect((title || '').length).toBeGreaterThan(0);
       }
     });
@@ -86,9 +92,10 @@ describe('webstrip', () => {
     const navTimeout = 2; // seconds
     const result = await webstrip('https://www.google.com', {
       navigate: navTimeout,
-      onPageLoaded: async evaluate => {
-        // eslint-disable-next-line max-len
-        await evaluate(`document.body.innerHTML = "<br /><br /><h1 style='text-align:center'>Testing <code>webstrip</code>...<br />Window should auto-close in ${navTimeout} seconds...</h1>"`);
+      onPageLoaded: async (evaluate) => {
+        await evaluate(
+          `document.body.innerHTML = "<br /><br /><h1 style='text-align:center'>Testing <code>webstrip</code>...<br />Window should auto-close in ${navTimeout} seconds...</h1>"`
+        );
       },
       onPageClosed: () => {
         counter += 1;
@@ -104,10 +111,11 @@ describe('webstrip', () => {
 
     // browser navigation
     expect(webstrip(blank, { waitUntil: 'networkidle' })).rejects.toThrow(ERR_NO_RESPONSE + blank);
-    expect(webstrip(notFound, { waitUntil: 'domcontentloaded' })).rejects.toThrow(ERR_NOT_FOUND + notFound);
+    expect(webstrip(notFound, { waitUntil: 'domcontentloaded' })).rejects.toThrow(
+      ERR_NOT_FOUND + notFound
+    );
     // http request
     expect(webstrip(blank)).rejects.toThrow(ERR_NO_RESPONSE + blank); // Protocol "about:" not supported. Expected "https:
     expect(webstrip(notFound)).rejects.toThrow(ERR_NOT_FOUND + notFound);
   });
-
 });

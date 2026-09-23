@@ -1,4 +1,4 @@
-import { ReqHeaderOptions } from './ReqHeaderOptions.js';
+import type { ReqHeaderOptions } from './ReqHeaderOptions.js';
 
 /** HTTP request options. */
 export interface ReqOptions {

@@ -1,8 +1,10 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "types": ["node"]
+  },
   "include": [
-    // CAUTION: do not include anything else
-    // or the dir structure will change
     "src/**/*.ts"
   ]
 }
