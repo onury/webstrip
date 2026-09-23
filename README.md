@@ -1,22 +1,29 @@
-<h1 align="center">
-    <img alt="webstrip" src="https://github.com/onury/webstrip/raw/main/_assets/logo.svg" width="300" height="auto" style="margin-bottom:20px">
-</h1>
+<p align="center">
+  <a href="https://github.com/onury/webstrip"><img alt="webstrip" src="https://github.com/onury/webstrip/raw/main/_assets/logo.svg" width="300" height="auto" /></a>
+</p>
 
 <p align="center">
-  <a href="https://github.com/onury/webstrip/actions/workflows/node.js.yml"><img src="https://github.com/onury/webstrip/actions/workflows/node.js.yml/badge.svg" alt="build" /></a>
-  <a href="https://github.com/onury/webstrip/actions/workflows/node.js.yml"><img src="https://img.shields.io/badge/coverage-100%25-2BB150?logo=vitest&logoColor=%23FDC72B&style=flat" alt="coverage" /></a>
+  <a href="https://github.com/onury/webstrip/actions/workflows/ci.yml"><img src="https://github.com/onury/webstrip/actions/workflows/ci.yml/badge.svg" alt="build" /></a>
+  <a href="https://github.com/onury/webstrip/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/coverage-100%25-2BB150?logo=vitest&logoColor=%23FDC72B&style=flat" alt="coverage" /></a>
+  <a href="https://stryker-mutator.io/docs/"><img src="https://img.shields.io/badge/mutation-100%25-2BB150?style=flat" alt="mutation score" /></a>
   <a href="https://www.npmjs.com/package/webstrip"><img src="https://img.shields.io/npm/v/webstrip.svg?style=flat&label=&color=%23C6234B&logo=npm" alt="version" /></a>
   <a href="https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7"><img src="https://img.shields.io/badge/ESM-F7DF1E?style=flat" alt="ESM" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TS-3260C7?style=flat" alt="TS" /></a>
+  <a href="https://github.com/onury/webstrip/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/webstrip.svg?style=flat&color=blue" alt="license" /></a>
 </p>
 
-Easy web stripping via API or CLI;
-- Using HTTP request or (headless/headful) browser navigation.
-- Ability to wait for full page load or network idle.
-- Ability to follow redirects. (configurable depth)
-- Auto-generate (and tweak) block-safe request headers.
-- Ability to launch browser (chromium) for manual navigation.
-- Ability to alter DOM (evaluate script) before returning contents.
+> This module is **ESM** 🔆. Please [**read this**](https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7).
+
+Easy web stripping via API or CLI. Fetch a page's content with a plain HTTP request carrying block-safe headers; or drive a real Chromium when the page needs a browser.
+
+- **HTTP** request by default; fast and light on memory.
+- Headless (or headful) **browser** navigation when you need it.
+- Wait for full page **load** or **network idle**.
+- Follow **redirects**, with a configurable depth.
+- **Auto-generated** (and tweakable) block-safe request headers.
+- Launch a visible Chromium for **manual** navigation.
+- Read or **alter the DOM** (evaluate a script) before the content is returned.
+- A **CLI** for all of the above.
 
 ## Installation
 
@@ -24,120 +31,202 @@ Easy web stripping via API or CLI;
 npm i webstrip
 ```
 
-**Important**: This module is **ESM** 🔆. Please [**read this**](https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7). 
-
+Node.js **22.12** or newer is required. Browser mode runs on [Puppeteer][puppeteer], which downloads its own Chromium when installed.
 
 ## Usage
 
-```typescript
+The simplest call is a plain HTTP request.
+
+```ts
 import { webstrip } from 'webstrip';
 
-const content = await webstrip('https://example.com', {
-  waitUntil: 'networkidle',
-  followRedirects: 5
-});
+const { statusCode, headers, data } = await webstrip('https://example.com');
 ```
 
-Alter DOM before stripping:
-```typescript
+### Browser Mode
+
+Setting `waitUntil`, `navigate`, `onPageLoaded` or `onPageClosed` switches to a Chromium browser. Use it for pages that render their content with JavaScript.
+
+```ts
+const result = await webstrip('https://example.com', {
+  waitUntil: 'networkidle', // or 'load', 'domcontentloaded'
+  followRedirects: 5
+});
+// result.data is the rendered page
+```
+
+> [!NOTE]
+> HTTP mode is much faster and uses less memory than the browser. Reach for the browser only when the page needs it.
+
+### Alter the DOM Before Stripping
+
+`onPageLoaded` receives the page's `evaluate` function. Whatever you change in the DOM is reflected in the returned content.
+
+```ts
 await webstrip('https://example.com', {
-  onPageLoaded: async evaluate => {
-    console.log('page loaded');
+  onPageLoaded: async (evaluate) => {
     const title = await evaluate('document.title');
-    
-    await evaluate(sel => {
-      // inside DOM here
-      document.querySelector(sel).remove();
-    }, getSomeSelector())
+    // runs inside the page
+    await evaluate((selector) => document.querySelector(selector)?.remove(), '#ads');
   }
 });
 ```
 
-## Options
+`onPageLoaded` waits for the `load` event, unless you set `waitUntil` yourself.
+
+### Redirects
+
+Up to 10 redirects are followed by default. Pass a number to change the limit, or `false` to follow none. When the limit is reached, webstrip throws; unless `redirectError` is `false`, in which case you get the last (redirect) response.
+
+```ts
+const result = await webstrip('http://example.com', {
+  followRedirects: 1,
+  redirectError: false
+});
+console.log(result.statusCode, result.headers.location, result.redirectCount);
+```
+
+_Note: in browser mode, `followRedirects: true` (or leaving it out) follows redirects without a limit._
+
+### Request Headers
+
+Headers that make the request look like a regular browser are generated for you. When `headerOptions` is left out, a random user agent is picked and the connection is kept alive. Tweak them with `headerOptions`.
+
+```ts
+await webstrip('https://example.com', {
+  headerOptions: {
+    ua: 'random', // 'default' | 'random' | 'none'
+    referer: 'none',
+    language: 'any', // sends *
+    dnt: false,
+    keepAlive: true
+  }
+});
+```
+
+The headers that were sent come back in `result.reqHeaders`.
+
+### Manual Navigation
+
+`navigate` opens a visible Chromium window. Pass a number of seconds to auto-close it; otherwise webstrip returns once you close the page.
+
+```ts
+await webstrip('https://example.com', {
+  navigate: 30,
+  onPageClosed: () => console.log('closed')
+});
+```
+
+## API
+
+### `webstrip(url, options?)`
+
+Strips the given URL and returns a promise that resolves to a [result](#result). It throws when no URL is given (`ERR_NO_URL`), the host cannot be resolved (`ERR_NOT_FOUND`), no response is received (`ERR_NO_RESPONSE`), or the redirect limit is reached (`ERR_REDIRECT`). These messages are exported as constants.
+
+### Options
 
 | Option | Type | Description | Default |
 | ------ | ---- | :---------- | :------ |
-| **` waitUntil `**| `string` | Whether to wait for `networkidle`, `load` or `domcontentloaded` event before stripping. If set, uses browser (chromium); instead of HTTP request for stripping.| `undefined` |
-| **` followRedirects `**| `boolean\|number` | Whether to follow redirects. Or specify the maximum number of redirects to follow.| `10` |
-| **` redirectError `**| `boolean` | Whether to throw an error when a redirect is encountered after `followRedirects` limit is reached. If `false`, the last response will be returned within the result.| `true` |
-| **` headerOptions `**| `ReqHeaderOptions` | Request header options. Auto-generated when undefined. | `undefined` |
-| **` navigate `**| `boolean\|number` | Opens chromium browser, instead of silent stripping. If a number is specified, it will be used as a timeout (in seconds) to auto-close the browser.| `false` |
-| **` onPageLoaded `**| `Function` | Callback function to be executed when the page is fully loaded.| `undefined` |
-| **` onPageClosed `**| `Function` | Callback function to be executed when the target is destroyed (i.e. browser/page is closed). Only applicable when `navigate` is enabled.| `undefined` |
+| **`waitUntil`** | `string` | Event to wait for before stripping: `'networkidle'`, `'load'` or `'domcontentloaded'`. Uses the browser. | `undefined` |
+| **`followRedirects`** | `boolean \| number` | Whether to follow redirects, or the maximum number to follow. | `10` |
+| **`redirectError`** | `boolean` | Whether to throw when the redirect limit is reached. If `false`, the last response is returned. | `true` |
+| **`headerOptions`** | `ReqHeaderOptions` | Request header options (see below). Auto-generated when omitted. | `undefined` |
+| **`navigate`** | `boolean \| number` | Opens a visible Chromium window. A number auto-closes it after that many seconds. | `false` |
+| **`onPageLoaded`** | `(evaluate) => void \| Promise<void>` | Called once the page is loaded, before its content is read. Uses the browser. | `undefined` |
+| **`onPageClosed`** | `() => void` | Called when the page is closed or the browser auto-closes. Only when `navigate` is enabled. | `undefined` |
 
-- All options are optional. 
-- HTTP request is much faster and uses less memory than browser navigation method.
-- Browser navigation is used when one of the following options is enabled: `waitUntil`, `navigate`, `onPageLoaded`, `onPageClosed`. 
+### Header Options
 
-### CLI Usage
+| Option | Type | Description | Default |
+| ------ | ---- | :---------- | :------ |
+| **`language`** | `'default' \| 'random' \| 'none' \| 'any'` | "Accept-Language" header. `'any'` sends `*`. | `'default'` |
+| **`encoding`** | `'default' \| 'random' \| 'none' \| 'any'` | "Accept-Encoding" header. When not set, an uncompressed response is requested. Compressed HTTP responses (gzip, deflate, br) are decoded. | `undefined` |
+| **`mime`** | `'default' \| 'random' \| 'none' \| 'any'` | "Accept" header. `'any'` sends `*/*`. When not set, HTML, XML and text are accepted. | `undefined` |
+| **`ua`** | `'default' \| 'random' \| 'none'` | "User-Agent" header. | `'default'` |
+| **`referer`** | `'default' \| 'random' \| 'none'` | "Referer" header. | `'default'` |
+| **`noCache`** | `boolean` | Whether to send the no-cache headers. | `true` |
+| **`secure`** | `boolean` | Whether to send "Upgrade-Insecure-Requests". | `true` |
+| **`dnt`** | `boolean` | Whether to send "Do Not Track". | `true` |
+| **`keepAlive`** | `boolean` | `true` sends "Connection: keep-alive", `false` sends "close". Left out, no "Connection" header is sent. | `undefined` |
+
+### Result
+
+| Property | Type | Description |
+| -------- | ---- | :---------- |
+| **`reqHeaders`** | `OutgoingHttpHeaders` | The generated request headers that were sent. |
+| **`statusCode`** | `number` | HTTP status code of the (last) response. |
+| **`headers`** | `IncomingHttpHeaders` | Response headers received. |
+| **`data`** | `string` | Response body; or the page content in browser mode. |
+| **`url`** | `string` | The final URL, after any redirects. |
+| **`redirectCount`** | `number` | Number of redirects followed. |
+
+## CLI
+
+```sh
+npx webstrip https://example.com
+npx webstrip https://example.com -w networkidle -o json
+```
+
+The CLI prints the result as text by default; use `--output json` for JSON. It exits with `1` when stripping fails and `2` when no URL is given.
 
 <details>
 <summary>See CLI help output</summary>
-<pre language="shell"><code>Usage
-&#x200B;  $ webstrip {url} [options]
-&#x200B;
+
+```
+Usage
+  $ webstrip <url> [options]
+
 Options
   --wait-until, -w        Wait for the specified event before stripping. One
-&#x200B;                          of: networkidle, load, domcontentloaded
+                          of: networkidle, load, domcontentloaded
   --follow-redirects, -f  Maximum number of redirects to follow.
-&#x200B;                          Default: 10
+                          Default: 10
   --redirect-error        Whether to throw when redirect limit is reached.
-&#x200B;                          Default: true
+                          Default: true
   --navigate, -n          Open chromium browser, instead of silent stripping.
-&#x200B;                          Pass a number to set a timeout (in seconds) to
-&#x200B;                          auto-close the browser.
+                          Pass a number to set a timeout (in seconds) to
+                          auto-close the browser.
   --eval, -e              Evaluate a script on the page's context before
-&#x200B;                          stripping.
+                          stripping.
   --output, -o            Output format. One of: json, text
-&#x200B;                          Default: text
+                          Default: text
   --language              What should be included in the "Accept-Language"
-&#x200B;                          header. One of: none, default, random, any
+                          header. One of: none, default, random, any
   --encoding              What should be included in the "Accept-Encoding"
-&#x200B;                          header. One of: none, default, random, any
+                          header. One of: none, default, random, any
   --mime                  What should be included in the "Accept" (MIME)
-&#x200B;                          header. One of: none, default, random, any
+                          header. One of: none, default, random, any
   --ua                    What should be included in the "User-Agent" header.
-&#x200B;                          One of: none, default, random
+                          One of: none, default, random
   --referer               What should be included in the "Referer" header. One
-&#x200B;                          of: none, default, random
-  --no-cache              Whether the response should not be cached.
-&#x200B;                          Default: true
+                          of: none, default, random
+  --cache                 Allow cached responses. By default, no-cache headers
+                          are sent (--no-cache).
   --secure                Whether to upgrade insecure (HTTP) requests to
-&#x200B;                          secure (HTTPS) requests.
-&#x200B;                          Default: true
+                          secure (HTTPS) requests.
+                          Default: true
   --dnt                   Whether to enable the "Do Not Track" (DNT) header.
-&#x200B;                          Default: true
+                          Default: true
   --keep-alive            Whether to keep the connection alive.
-&#x200B; 
+  --help                  Show this help.
+
 Examples
-&#x200B;  $ webstrip https://google.com -f 5 --ua random
-&#x200B;  $ webstrip https://amazon.com -w load -e "document.querySelector('#navbar').remove()"
-</code></pre>
-</details>
-
-## Returned Result
-
-`webstrip` returns the object below when called programmatically.
-
-```ts
-{
-  /** Generated request headers sent. */
-  reqHeaders: OutgoingHttpHeaders;
-  /** HTTP status code. */
-  statusCode: number;
-  /** Response headers received. */
-  headers: IncomingHttpHeaders,
-  /** Response body received. */
-  data: string;
-  /** The requested URL. */
-  url: string;
-  /** Number of HTTP redirects, if any has occurred. */
-  redirectCount: number;
-}
+  $ webstrip https://google.com -f 5 --ua random
+  $ webstrip https://amazon.com -w load -e "document.querySelector('#navbar').remove()"
 ```
 
-For CLI, you can use the `--output` flag for `text` or `json` preference.
+</details>
+
+Boolean flags can be negated with a `--no-` prefix; e.g. `--no-dnt`, `--no-redirect-error`.
+
+## Changelog
+
+See [**CHANGELOG**][changelog].
 
 ## License
 
-**MIT** ©️ Onur Yıldırım ([@onury](https://github.com/onury)).
+© 2026, Onur Yıldırım. [**MIT**][license] License.
+
+[license]:https://github.com/onury/webstrip/blob/main/LICENSE
+[changelog]:https://github.com/onury/webstrip/blob/main/CHANGELOG.md
+[puppeteer]:https://pptr.dev
