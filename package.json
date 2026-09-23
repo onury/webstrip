@@ -22,7 +22,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "webstrip": "./lib/cli.js"
+    "webstrip": "./lib/bin.js"
   },
   "sideEffects": false,
   "files": [

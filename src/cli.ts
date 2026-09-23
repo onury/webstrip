@@ -1,43 +1,28 @@
-#! /usr/bin/env node
-
 // core modules
 import fs from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 // dep modules
 import { chalk, meows } from 'meow-styler';
+
+// own modules
 import type { ReqHeaderOptions } from './types/ReqHeaderOptions.js';
 import type { WebstripOptions } from './types/WebstripOptions.js';
-// own modules
 import { ERR_NO_URL, webstrip } from './webstrip.js';
 
-// constants
-const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
-const currentFilePath = resolve(fileURLToPath(import.meta.url));
-const realPathReceived = process.argv[1]
-  ? fs.realpathSync(resolve(process.argv[1].trim())) /* v8 ignore next */
-  : undefined;
-/**
- * Indicates whether this script is called directly from the command line. We
- * need this to make the CLI mockable while testing.
- */
-const commandLineCall = realPathReceived
-  ? currentFilePath.includes(realPathReceived) /* v8 ignore next */
-  : false;
-
-type ExitFn = () => never;
+const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 /**
- * The main function of the webstrip CLI.
+ * Runs the webstrip CLI with the given arguments and writes the result to the
+ * console. The caller decides what to do with the returned exit code, which
+ * keeps this function testable in-process.
  *
- * @param args - Optional array of string arguments.
- * @returns A promise that resolves to an exit function.
+ * @param args - Command line arguments. Defaults to `process.argv.slice(2)`.
+ * @returns The exit code: `0` on success, `1` on a failed strip, `2` on a usage error.
  */
-export async function main(args?: string[]): Promise<ExitFn> {
+export async function main(args: string[] = process.argv.slice(2)): Promise<number> {
   const cli = meows({
     pkg,
-    argv: args ?? process.argv.slice(2),
+    argv: args,
     autoHelp: false,
     description: pkg.description,
     usage: (c) =>
@@ -136,10 +121,9 @@ export async function main(args?: string[]): Promise<ExitFn> {
         type: 'string',
         choices: ['none', 'default', 'random']
       },
-      noCache: {
-        description: 'Whether the response should not be cached.',
-        type: 'boolean',
-        default: true
+      cache: {
+        description: 'Allow cached responses. By default, no-cache headers are sent (--no-cache).',
+        type: 'boolean'
       },
       secure: {
         description: 'Whether to upgrade insecure (HTTP) requests to secure (HTTPS) requests.',
@@ -165,76 +149,62 @@ export async function main(args?: string[]): Promise<ExitFn> {
   const url = cli.input[0];
   const { flags } = cli;
 
+  if (flags.help) {
+    console.log(cli.help);
+    return 0;
+  }
+
+  if (!url) {
+    console.error(chalk.red('Error: ') + chalk.yellow(ERR_NO_URL));
+    console.log(cli.help);
+    return 2;
+  }
+
+  const script = flags.eval;
+  const options: WebstripOptions = {
+    waitUntil: flags.waitUntil as WebstripOptions['waitUntil'],
+    followRedirects: flags.followRedirects,
+    redirectError: flags.redirectError,
+    // a bare --navigate (no seconds) keeps the browser open until it is closed
+    navigate: 'navigate' in flags ? flags.navigate || true : false,
+    onPageLoaded: script
+      ? async (evaluate) => {
+          await evaluate(script);
+        }
+      : undefined,
+    headerOptions: {
+      language: flags.language as ReqHeaderOptions['language'],
+      encoding: flags.encoding as ReqHeaderOptions['encoding'],
+      mime: flags.mime as ReqHeaderOptions['mime'],
+      ua: flags.ua as ReqHeaderOptions['ua'],
+      referer: flags.referer as ReqHeaderOptions['referer'],
+      noCache: flags.cache !== true,
+      secure: flags.secure,
+      dnt: flags.dnt,
+      keepAlive: flags.keepAlive
+    }
+  };
+
   try {
-    if (flags.help) {
-      console.log(cli.help);
-      return () => process.exit(0);
-    }
-
-    if (!url) {
-      console.error(chalk.red('Error: ') + chalk.yellow(ERR_NO_URL));
-      console.log(cli.help);
-      /* v8 ignore next */
-      return () => process.exit(2);
-    }
-
-    const options: WebstripOptions = {
-      waitUntil: flags.waitUntil as WebstripOptions['waitUntil'],
-      followRedirects: flags.followRedirects,
-      redirectError: flags.redirectError,
-      navigate:
-        'navigate' in flags
-          ? /* v8 ignore next */
-            !flags.navigate
-            ? true // truthy when 0 or undefined
-            : flags.navigate
-          : false,
-      onPageLoaded: flags.eval
-        ? async (evaluate) => {
-            evaluate(flags.eval);
-          }
-        : undefined,
-      headerOptions: {
-        language: flags.language as ReqHeaderOptions['language'],
-        encoding: flags.encoding as ReqHeaderOptions['encoding'],
-        mime: flags.mime as ReqHeaderOptions['mime'],
-        ua: flags.ua as ReqHeaderOptions['ua'],
-        referer: flags.referer as ReqHeaderOptions['referer'],
-        noCache: flags.noCache,
-        secure: flags.secure,
-        dnt: flags.dnt,
-        keepAlive: flags.keepAlive
-      }
-    };
-
     const result = await webstrip(url, options);
     if (flags.output === 'json') {
       console.info(JSON.stringify(result, null, 2));
-    } else {
-      console.info(chalk.cyan('Request URL   :'), result.url);
-      console.info(chalk.cyan('Status Code   :'), result.statusCode);
-      console.info(chalk.cyan('Redirect Count:'), result.redirectCount);
-      const headerNames = Object.keys(result.headers);
-      const width = headerNames.reduce((w, key) => Math.max(w, key.length), 0);
-      console.info(chalk.cyan('\nResponse Headers:'));
-      headerNames.forEach((key) => {
-        console.info(`${key.padEnd(width)}: ${result.headers[key]}`);
-      });
-      console.info(chalk.cyan('\nResponse Body:'));
-      console.info(result.data);
+      return 0;
     }
-
-    /* v8 ignore next */
-    return () => process.exit(0);
-
-    /* v8 ignore start */
+    console.info(chalk.cyan('Request URL   :'), result.url);
+    console.info(chalk.cyan('Status Code   :'), result.statusCode);
+    console.info(chalk.cyan('Redirect Count:'), result.redirectCount);
+    const headerNames = Object.keys(result.headers);
+    const width = Math.max(0, ...headerNames.map((key) => key.length));
+    console.info(chalk.cyan('\nResponse Headers:'));
+    for (const key of headerNames) {
+      console.info(`${key.padEnd(width)}: ${result.headers[key]}`);
+    }
+    console.info(chalk.cyan('\nResponse Body:'));
+    console.info(result.data);
+    return 0;
   } catch (err) {
     console.error(chalk.yellow('Error: ') + chalk.redBright((err as Error).message));
-    return () => process.exit(1);
+    return 1;
   }
-  /* v8 ignore stop */
 }
-
-// only execute if the script is being run directly from the command line
-/* v8 ignore next */
-if (commandLineCall) (await main())(); // main() then exit()
