@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`cli > --help prints the styled help and exits 0 1`] = `
+"
+  [37mEasy web stripping via API or CLI.[39m
+
+  [33m[1mUsage[22m[39m
+    [2m[36m$[39m[22m[94m webstrip [39m[36m<url> [39m[32m[2m[options][22m[39m
+
+  [33m[1mOptions[22m[39m
+    [92m--wait-until, -w[39m        [37mWait for the specified event before stripping. One[39m
+                            [37mof: networkidle, load, domcontentloaded[39m
+    [92m--follow-redirects, -f[39m  [37mMaximum number of redirects to follow.[39m
+                            [90mDefault: 10[39m
+    [92m--redirect-error[39m        [37mWhether to throw when redirect limit is reached.[39m
+                            [90mDefault: true[39m
+    [92m--navigate, -n[39m          [37mOpen chromium browser, instead of silent stripping.[39m
+                            [37mPass a number to set a timeout (in seconds) to[39m
+                            [37mauto-close the browser.[39m
+    [92m--eval, -e[39m              [37mEvaluate a script on the page's context before[39m
+                            [37mstripping.[39m
+    [92m--output, -o[39m            [37mOutput format. One of: json, text[39m
+                            [90mDefault: text[39m
+    [92m--language[39m              [37mWhat should be included in the "Accept-Language"[39m
+                            [37mheader. One of: none, default, random, any[39m
+    [92m--encoding[39m              [37mWhat should be included in the "Accept-Encoding"[39m
+                            [37mheader. One of: none, default, random, any[39m
+    [92m--mime[39m                  [37mWhat should be included in the "Accept" (MIME)[39m
+                            [37mheader. One of: none, default, random, any[39m
+    [92m--ua[39m                    [37mWhat should be included in the "User-Agent" header.[39m
+                            [37mOne of: none, default, random[39m
+    [92m--referer[39m               [37mWhat should be included in the "Referer" header. One[39m
+                            [37mof: none, default, random[39m
+    [92m--cache[39m                 [37mAllow cached responses. By default, no-cache headers[39m
+                            [37mare sent (--no-cache).[39m
+    [92m--secure[39m                [37mWhether to upgrade insecure (HTTP) requests to[39m
+                            [37msecure (HTTPS) requests.[39m
+                            [90mDefault: true[39m
+    [92m--dnt[39m                   [37mWhether to enable the "Do Not Track" (DNT) header.[39m
+                            [90mDefault: true[39m
+    [92m--keep-alive[39m            [37mWhether to keep the connection alive.[39m
+    [92m--help[39m                  [37mShow this help.[39m
+
+  [33m[1mExamples[22m[39m
+    [36m[2m$[22m[39m[94m webstrip [39m[36mhttps://google.com[39m[32m -f [39m[37m5[39m[32m --ua [39m[37mrandom[39m
+    [36m[2m$[22m[39m[94m webstrip [39m[36mhttps://amazon.com[39m[32m -w [39m[37mload[39m[32m -e [39m[37m"document.querySelector('#navbar').remove()"[39m
+
+"
+`;

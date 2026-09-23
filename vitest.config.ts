@@ -1,38 +1,28 @@
-import { configDefaults, defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 
-// eslint-disable-next-line import/no-default-export
-export default defineConfig(_configEnv => {
-
-  return {
-    test: {
-      // if true, add "vitest/globals" to
-      // compilerOptions.types in tsconfig.json
-      globals: true,
-      environment: 'node',
-      // include: [...configDefaults.include],
-      exclude: [...configDefaults.exclude, '**/lib/**'],
-      coverage: {
-        // provider: 'v8',
-        include: ['src/**/*.ts', 'src/**/*.tsx'],
-        exclude: [
-          ...configDefaults.coverage.exclude ?? [],
-          'test/**'
-        ],
-        reportsDirectory: 'test/.coverage',
-        reporter: [
-          'text',
-          // ['lcov', { projectRoot: './src', directory: 'test/.coverage/lcov' }],
-          ['json', { file: 'coverage.json' }],
-          ['html', { directory: 'test/.coverage/html' }]
-        ],
-        thresholds: {
-          statements: 100,
-          branches: 100,
-          functions: 100,
-          lines: 100
-        }
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    include: ['test/**/*.{test,spec}.ts'],
+    // colors on, so the help snapshot pins the CLI's styling too
+    env: { FORCE_COLOR: '1' },
+    coverage: {
+      provider: 'istanbul',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: 'test/coverage',
+      include: ['src/**/*.ts'],
+      // bin.ts is the two-line executable shim around cli.ts's main(); it only
+      // runs as a real process, which the in-process coverage cannot see
+      exclude: ['src/bin.ts'],
+      thresholds: {
+        lines: 100,
+        functions: 100,
+        statements: 100,
+        branches: 100
       }
     }
-  };
-
+  }
 });
