@@ -38,7 +38,7 @@ function getError(e: unknown, url: string): Error {
 }
 
 function getNavInfo(navigate?: WebstripOptions['navigate']): { time: number; enabled: boolean } {
-  const time = typeof navigate === 'number' && navigate > 0 ? navigate * 1_000 : 0;
+  const time = typeof navigate === 'number' ? navigate * 1_000 : 0;
   return { time, enabled: navigate === true || time > 0 };
 }
 
@@ -96,7 +96,9 @@ function request(
           response.on('data', (chunk: Buffer) => chunks.push(chunk));
           response.on('error', fail);
           response.on('end', () => {
-            const { statusCode = 0, headers } = response;
+            // always set on a client response
+            const statusCode = response.statusCode as number;
+            const { headers } = response;
             if (headers.location && REDIRECT_CODES.includes(statusCode)) {
               if (redirectCount < getMaxRedirects(options.followRedirects)) {
                 // Location may be relative to the current URL

@@ -1,5 +1,5 @@
 // core modules
-import fs from 'node:fs';
+import { createRequire } from 'node:module';
 
 // dep modules
 import { chalk, meows } from 'meow-styler';
@@ -8,8 +8,6 @@ import { chalk, meows } from 'meow-styler';
 import type { ReqHeaderOptions } from './types/ReqHeaderOptions.js';
 import type { WebstripOptions } from './types/WebstripOptions.js';
 import { ERR_NO_URL, webstrip } from './webstrip.js';
-
-const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 /**
  * Runs the webstrip CLI with the given arguments and writes the result to the
@@ -20,6 +18,7 @@ const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.ur
  * @returns The exit code: `0` on success, `1` on a failed strip, `2` on a usage error.
  */
 export async function main(args: string[] = process.argv.slice(2)): Promise<number> {
+  const pkg = createRequire(import.meta.url)('../package.json');
   const cli = meows({
     pkg,
     argv: args,
