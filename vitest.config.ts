@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'lcov', 'json-summary'],
-      reportsDirectory: '_backup/reports/coverage',
+      reportsDirectory: 'test/coverage',
       include: ['src/**/*.ts'],
       // bin.ts is the two-line executable shim around cli.ts's main(); it only
       // runs as a real process, which the in-process coverage cannot see
