@@ -11,6 +11,7 @@ import {
   webstrip
 } from '../src/index.js';
 import { DEFAULT_ACCEPT, userAgents } from '../src/utils/headers.js';
+import { spyLaunch } from './fixtures/browser.js';
 import { closedPortUrl, PAGE, RENDERED, startServer, type TestServer } from './fixtures/server.js';
 
 const NOT_FOUND_URL = 'http://webstrip-test.invalid/';
@@ -30,22 +31,6 @@ afterAll(async () => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/**
- * Spies on puppeteer.launch: always launches headless (a visible window cannot
- * open in CI) and records the launched browsers, so a test can close the page
- * the way a user would.
- */
-function spyLaunch(): { spy: ReturnType<typeof vi.spyOn>; browsers: Browser[] } {
-  const launch = puppeteer.launch.bind(puppeteer);
-  const browsers: Browser[] = [];
-  const spy = vi.spyOn(puppeteer, 'launch').mockImplementation(async (opts) => {
-    const browser = await launch({ ...opts, headless: true });
-    browsers.push(browser);
-    return browser;
-  });
-  return { spy, browsers };
-}
 
 describe('webstrip()', () => {
   test('throws when no URL is given', async () => {
@@ -272,13 +257,11 @@ describe('browser mode', () => {
   });
 
   test('a failing browser close does not fail the strip', async () => {
-    const { browsers } = spyLaunch();
+    const { browsers, realClose } = spyLaunch();
     const result = await webstrip(`${base}/page`, {
       onPageLoaded: () => {
-        const browser = browsers[0] as Browser;
-        const close = browser.close.bind(browser);
-        vi.spyOn(browser, 'close').mockImplementation(async () => {
-          await close();
+        vi.mocked((browsers[0] as Browser).close).mockImplementation(async () => {
+          await realClose[0]?.();
           throw new Error('already closed');
         });
       }
@@ -350,35 +333,19 @@ describe('navigate', () => {
   });
 
   test('waits for the page to be closed', async () => {
-    const { browsers } = spyLaunch();
+    spyLaunch('close-page');
     const onPageClosed = vi.fn();
-    const result = await webstrip(`${base}/page`, {
-      navigate: true,
-      onPageLoaded: () => {
-        // close the page the way a user would, once the result is being awaited
-        setTimeout(async () => {
-          const [page] = await browsers[0]!.pages();
-          await page!.close();
-        }, 100);
-      },
-      onPageClosed
-    });
+    const result = await webstrip(`${base}/page`, { navigate: true, onPageClosed });
     expect(result.statusCode).toBe(200);
+    expect(result.data).toContain(RENDERED);
     expect(onPageClosed).toHaveBeenCalledOnce();
   });
 
   test('returns when the browser goes away without closing the page', async () => {
-    const { browsers } = spyLaunch();
+    const { browsers } = spyLaunch('disconnect');
     const onPageClosed = vi.fn();
     try {
-      const result = await webstrip(`${base}/page`, {
-        navigate: true,
-        onPageLoaded: () => {
-          // e.g. the user quits the browser, or it crashes
-          setTimeout(() => browsers[0]?.disconnect(), 100);
-        },
-        onPageClosed
-      });
+      const result = await webstrip(`${base}/page`, { navigate: true, onPageClosed });
       expect(result.statusCode).toBe(200);
       expect(onPageClosed).toHaveBeenCalledOnce();
     } finally {
@@ -387,26 +354,12 @@ describe('navigate', () => {
   });
 
   test('cancels the auto-close timer when the page is closed first', async () => {
-    const { browsers } = spyLaunch();
-    const closes: number[] = [];
-    await webstrip(`${base}/page`, {
-      navigate: 1,
-      onPageLoaded: () => {
-        const browser = browsers[0]!;
-        const close = browser.close.bind(browser);
-        vi.spyOn(browser, 'close').mockImplementation(() => {
-          closes.push(Date.now());
-          return close();
-        });
-        setTimeout(async () => {
-          const [page] = await browser.pages();
-          await page!.close();
-        }, 100);
-      }
-    });
-    // the timer would have fired 1s after load
+    const { closeCalls } = spyLaunch('close-page');
+    await webstrip(`${base}/page`, { navigate: 1 });
+    expect(closeCalls[0]).toBe(1);
+    // the auto-close timer would fire 1s after load; it must not call close() again
     await new Promise((resolve) => setTimeout(resolve, 1200));
-    expect(closes).toHaveLength(1);
+    expect(closeCalls[0]).toBe(1);
   });
 
   test('0 or a negative number does not navigate', async () => {

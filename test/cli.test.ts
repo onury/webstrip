@@ -2,12 +2,13 @@
 import { stripVTControlCharacters as plain } from 'node:util';
 
 // dep modules
-import puppeteer, { type Browser } from 'puppeteer';
+import puppeteer from 'puppeteer';
 
 // own modules
 import { main } from '../src/cli.js';
 import { acceptLanguages, userAgents } from '../src/utils/headers.js';
 import { ERR_NO_URL, ERR_REDIRECT } from '../src/webstrip.js';
+import { spyLaunch } from './fixtures/browser.js';
 import { RENDERED, startServer, type TestServer } from './fixtures/server.js';
 
 interface Run {
@@ -190,20 +191,15 @@ describe('cli', () => {
     expect(JSON.parse(stdout).data).toContain('<body><p>evaluated</p></body>');
   });
 
-  describe('--navigate', () => {
-    function spyLaunch(): Browser[] {
-      const launch = puppeteer.launch.bind(puppeteer);
-      const browsers: Browser[] = [];
-      vi.spyOn(puppeteer, 'launch').mockImplementation(async (opts) => {
-        expect(opts?.headless).toBe(false);
-        // a visible window cannot open in CI
-        const browser = await launch({ ...opts, headless: true });
-        browsers.push(browser);
-        return browser;
-      });
-      return browsers;
-    }
+  test('--eval takes its value as a script string, even when it looks like a number', async () => {
+    // parsed as a number, 42 would reach page.evaluate() as a non-string and fail
+    const { code, stdout, stderr } = await run(`${base}/page`, '--eval', '42', '-o', 'json');
+    expect(stderr).toBe('');
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout).data).toContain(RENDERED);
+  });
 
+  describe('--navigate', () => {
     test('with seconds, auto-closes the browser', async () => {
       const launch = puppeteer.launch.bind(puppeteer);
       const spy = vi
@@ -217,20 +213,9 @@ describe('cli', () => {
     });
 
     test('bare, waits for the page to be closed', async () => {
-      const browsers = spyLaunch();
-      const timer = setInterval(async () => {
-        try {
-          const [page] = (await browsers[0]?.pages()) ?? [];
-          if (page && (await page.evaluate('document.readyState')) === 'complete') {
-            clearInterval(timer);
-            await page.close();
-          }
-        } catch {
-          // the page is still navigating; try again on the next tick
-        }
-      }, 100);
+      const { spy } = spyLaunch('close-page');
       const { code, stdout } = await runKeepingSpies(`${base}/page`, '--navigate', '-o', 'json');
-      clearInterval(timer);
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ headless: false }));
       expect(code).toBe(0);
       expect(JSON.parse(stdout).data).toContain(RENDERED);
     });
